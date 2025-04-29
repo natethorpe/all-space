@@ -1,3 +1,4 @@
+// File Path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\middlewares\uploadMiddleware\utils\LocalfileFilter.js
 const fileFilter =
   (type = 'default') =>
   (req, file, cb) => {

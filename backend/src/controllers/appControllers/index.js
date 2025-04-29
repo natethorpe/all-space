@@ -1,3 +1,4 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\controllers\appControllers\index.js
 const createCRUDController = require('@/controllers/middlewaresControllers/createCRUDController');
 const { routesList } = require('@/models/utils');
 

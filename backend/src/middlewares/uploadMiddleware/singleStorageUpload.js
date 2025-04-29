@@ -1,3 +1,4 @@
+// File Path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\middlewares\uploadMiddleware\singleStorageUpload.js
 const multer = require('multer');
 const path = require('path');
 const { slugify } = require('transliteration');

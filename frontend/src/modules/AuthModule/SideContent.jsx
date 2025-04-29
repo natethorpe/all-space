@@ -1,3 +1,4 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\src\modules\AuthModule\SideContent.jsx
 import { Space, Layout, Divider, Typography } from 'antd';
 import logo from '@/style/images/idurar-crm-erp.svg';
 import useLanguage from '@/locale/useLanguage';

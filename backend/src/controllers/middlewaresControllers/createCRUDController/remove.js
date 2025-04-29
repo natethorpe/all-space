@@ -1,3 +1,4 @@
+// File Path: backend/src/controllers/middlewaresControllers/createCRUDController/remove.js
 const remove = async (Model, req, res) => {
   // Find the document by id and delete it
   let updates = {

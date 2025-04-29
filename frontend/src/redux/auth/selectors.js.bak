@@ -1,0 +1,47 @@
+/*
+ * File Path: frontend/src/redux/auth/selectors.js
+ * Purpose: Redux selectors for auth state in IDURAR ERP CRM.
+ * How It Works:
+ *   - Provides selectors for auth state (selectAuth, selectCurrentAdmin, isLoggedIn).
+ *   - Temporarily includes logOut action to fix SyntaxError in IdurarOs.jsx.
+ * Dependencies:
+ *   - reselect: createSelector for memoized selectors (version 5.1.0).
+ * Dependents:
+ *   - IdurarOs.jsx: Uses selectAuth, logOut for auth routing.
+ * Change Log:
+ *   - 04/23/2025: Added temporary logOut action to fix SyntaxError.
+ *   - 04/24/2025: Fixed isAuthenticated: undefined issue.
+ *     - Why: IdurarOs.jsx stuck at AuthRouter due to undefined auth state (User, 04/24/2025).
+ *     - How: Modified selectAuth to default isAuthenticated to false if undefined.
+ *     - Test: Run `npm run dev`, navigate to /grok, verify redirect to /login if no token, ErpApp if authenticated.
+ * Test Instructions:
+ *   - Run `npm run dev`, navigate to /grok: Confirm redirect to /login if unauthenticated, ErpApp if authenticated.
+ *   - Clear localStorage.auth: Verify redirect to /login, no undefined auth state.
+ * Future Enhancements:
+ *   - Move logOut to redux/auth/actions.js when available (Sprint 3).
+ * Self-Notes:
+ *   - Nate: Fixed isAuthenticated: undefined to ensure proper routing (04/24/2025).
+ */
+import { createSelector } from 'reselect';
+
+const authSelect = (state) => state.auth || { isAuthenticated: false, isLoading: false };
+
+export const selectAuth = createSelector(
+  [authSelect],
+  (auth) => ({
+    isAuthenticated: auth.isAuthenticated ?? false, // Default to false if undefined
+    isLoading: auth.isLoading ?? false,
+    current: auth.current,
+  })
+);
+
+export const selectCurrentAdmin = createSelector([selectAuth], (auth) => auth.current);
+
+export const isLoggedIn = createSelector([selectAuth], (auth) => auth.isAuthenticated);
+
+// Temporary logOut action (move to actions.js in Sprint 3)
+export const logOut = () => (dispatch) => {
+  console.log('selectors: Dispatching LOG_OUT action');
+  dispatch({ type: 'LOG_OUT' });
+  localStorage.removeItem('auth');
+};

@@ -1,0 +1,539 @@
+/* File Path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\src\style\global.css */
+/* File Description:
+ * - Purpose: Provides global CSS styles for the Woodkey Festival and Hi-Way Drive-In CRM, ensuring proper rendering of Ant Design components, FullCalendar, and responsive layouts.
+ * - Functionality:
+ *   - Fixes Ant Design layout issues (e.g., visibility, width, flexbox alignment).
+ *   - Styles FullCalendar for event visibility and compactness.
+ *   - Includes optional React-Big-Calendar styles for potential future use.
+ *   - Adds responsive adjustments for mobile support.
+ *   - Styles Ant Design notifications to be visible.
+ *   - Styles the header to ensure the user dropdown is visible.
+ * - Structure:
+ *   - Ant Design Layout Fixes: Styles for `.ant-layout`, `.ant-layout-sider`, `.ant-layout-content`, etc.
+ *   - FullCalendar Styles: Styles for `.fc-*` classes to ensure proper calendar rendering.
+ *   - React-Big-Calendar Styles: Optional styles for `.rbc-*` classes.
+ *   - Responsive Adjustments: Media queries for mobile support.
+ *   - Notification Styles: Styles for `.ant-message` to ensure visibility.
+ *   - Header Styles: Styles for `.site-layout-background` to ensure user dropdown visibility.
+ * - Connections:
+ *   - Used by: All components in the app, including ErpLayout/index.jsx, Dashboard.jsx, and calendar components.
+ *   - Impacts: Ant Design components (Layout, Table), FullCalendar, and responsive layouts.
+ * - Dependencies:
+ *   - Ant Design: Styles target Ant Design classes (e.g., `.ant-layout`).
+ *   - FullCalendar: Styles target FullCalendar classes (e.g., `.fc-*`).
+ * - Current Features:
+ *   - Ensures Ant Design layouts render correctly with proper visibility and sizing.
+ *   - Styles FullCalendar for compact, visible events and proper grid rendering.
+ *   - Provides responsive adjustments for mobile devices.
+ *   - Ensures notifications are visible on the page.
+ *   - Ensures the user dropdown in the header is visible.
+ * - Status:
+ *   - As of 04/06/2025, content overflows viewport due to fixed widths, notifications not visible on page, user dropdown missing.
+ * - Updates (04/06/2025):
+ *   - Overrode margins on main.ant-layout-content with maximum specificity.
+ *     - Why: Previous rules still overridden by Ant Design defaults (width: 300px, margin: 40px 520.833px).
+ *     - How: Added .erp-layout .ant-layout-has-sider .erp-inner-layout .ant-layout-content.css-dev-only-do-not-override-bmvakj selector.
+ *     - Impact: Forces content area to full width, removes centering margins.
+ *   - Ensured .ant-layout-has-sider and .erp-inner-layout allow content to grow.
+ *     - Why: Parent layout constrained child width.
+ *     - How: Reinforced flex properties.
+ *     - Impact: Allows content to fill available space.
+ *   - Updates (04/06/2025):
+ *   - Added fallback rule to override Ant Design’s max-width and margin.
+ *     - Why: Inline styles in ErpLayout still being overridden by Ant Design.
+ *     - How: Added [style*="max-width"] selector to target inline styles.
+ *     - Impact: Ensures content area expands even if Ant Design applies max-width.
+ *   - Updates (04/06/2025):
+ *   - Added more aggressive rule to override Ant Design’s CSS-in-JS styles.
+ *     - Why: css-dev-only-do-not-override-bmvakj still applies width: 300px and margin: 40px 520.833px.
+ *     - How: Added !important rule with higher specificity using :where.
+ *     - Impact: Forces content area to expand to full width.
+ *   - Updates (04/06/2025):
+ *   - Added even more aggressive rule to override Ant Design’s CSS-in-JS styles.
+ *     - Why: css-dev-only-do-not-override-bmvakj still applies width: 300px and margin: 40px 520.833px.
+ *     - How: Added specific selector targeting .ant-layout-content with !important.
+ *     - Impact: Forces content area to expand to full width.
+ *   - Updates (04/06/2025):
+ *   - Fixed content going past screen by removing centering margin.
+ *     - Why: margin: 40px 79.1667px centers the content, causing overflow on smaller screens.
+ *     - How: Ensured margin: 0 is applied with higher specificity.
+ *     - Impact: Content fits within the viewport.
+ *   - Updates (04/06/2025):
+ *   - Ensured content fits viewport by using max-width: 100%.
+ *     - Why: max-width: 1400px causes overflow on smaller screens.
+ *     - How: Set max-width: 100% with higher specificity.
+ *     - Impact: Content scales to viewport width.
+ *   - Updates (04/06/2025):
+ *   - Fixed content overflow by ensuring child elements scale to viewport.
+ *     - Why: Child elements (e.g., tables, calendars) have fixed widths causing overflow.
+ *     - How: Added max-width: 100% to child elements.
+ *     - Impact: Content fits within the viewport.
+ *   - Updates (04/06/2025):
+ *   - Styled notifications to be visible on the page.
+ *     - Why: Notifications were only appearing as push notifications, not on the page.
+ *     - How: Added styles for .ant-message to ensure visibility.
+ *     - Impact: On-page notifications are now visible.
+ *   - Updates (04/06/2025):
+ *   - Enhanced scalability for smaller viewports.
+ *     - Why: Content overflows when dev tools are open (smaller viewport).
+ *     - How: Added more aggressive max-width: 100% rules and adjusted table/calendar styles.
+ *     - Impact: Content scales to viewport width even on smaller screens.
+ *   - Updates (04/06/2025):
+ *   - Ensured user dropdown in header is visible.
+ *     - Why: Account info and logout options were missing.
+ *     - How: Adjusted styles for .site-layout-background and .ant-dropdown.
+ *     - Impact: User dropdown is now visible.
+ *   - Next Steps: Test on various screen sizes; ensure sponsor list renders correctly.
+ * - Future Enhancements:
+ *   - Add dark mode support with CSS variables.
+ *   - Optimize FullCalendar styles for larger screens (e.g., 4K displays).
+ *   - Remove unused React-Big-Calendar styles if no longer needed.
+ *   - Add animations for SPHERE branding (e.g., fade-in for content).
+ * - Dependencies on This File:
+ *   - ErpLayout.jsx: Uses .erp-layout, .erp-inner-layout, .erp-content classes.
+ *   - Dashboard.jsx: Relies on layout and typography fixes.
+ *   - Calendar.jsx: Uses FullCalendar styles.
+ *   - SponsorHub.jsx, EmployeeDash.jsx, AdminSettings.jsx: Affected by Ant Design table and layout styles.
+ * - This File Depends On:
+ *   - Ant Design and FullCalendar: Targets their generated classes.
+ */
+
+/* Ensure Ant Design Layout renders correctly */
+.erp-layout,
+.erp-layout .ant-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100vh !important;
+  width: 100% !important;
+  min-width: 100vw !important;
+  overflow: visible !important;
+  flex: 1 1 auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Fix layout with sider */
+.erp-layout .ant-layout.ant-layout-has-sider {
+  flex-direction: row !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  flex: 1 1 auto !important;
+}
+
+/* Inner layout for header and content */
+.erp-layout .erp-inner-layout,
+.erp-layout .ant-layout.erp-inner-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Fix sidebar width */
+.erp-layout .ant-layout-sider,
+.erp-layout .ant-layout-sider.site-layout-background {
+  flex: 0 0 200px !important;
+  max-width: 200px !important;
+  min-width: 200px !important;
+  width: 200px !important;
+}
+
+/* Style the header to ensure user dropdown is visible */
+.site-layout-background {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 0 16px !important;
+  background: #001529 !important;
+  color: #fff !important;
+  height: 64px !important;
+}
+
+.site-layout-background .logo {
+  font-size: 18px !important;
+  font-weight: bold !important;
+  color: #fff !important;
+}
+
+.site-layout-background .ant-btn-link {
+  color: #fff !important;
+  font-size: 16px !important;
+  margin-right: 16px !important;
+}
+
+.site-layout-background .ant-btn-link:hover {
+  color: #40a9ff !important;
+}
+
+.ant-dropdown-menu {
+  background: #fff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.ant-dropdown-menu-item {
+  color: #000 !important;
+}
+
+.ant-dropdown-menu-item:hover {
+  background: #f0f2f5 !important;
+}
+
+/* Ensure content area is visible and takes remaining space */
+.erp-layout .ant-layout .ant-layout-content.erp-content {
+  display: flex !important;
+  flex-direction: column !important;
+  visibility: visible !important;
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 1 !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  margin: 10px 0 !important;
+  padding: 0 10px !important;
+}
+
+/* Override default Ant Design content margins and width with maximum specificity */
+.erp-layout .ant-layout .ant-layout-content,
+.erp-layout .ant-layout-has-sider .ant-layout-content,
+.erp-layout .ant-layout-has-sider .erp-inner-layout .ant-layout-content,
+.erp-layout .ant-layout-has-sider .erp-inner-layout .ant-layout-content.css-dev-only-do-not-override-bmvakj {
+  margin: 10px 0 !important;
+  padding: 0 10px !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 auto !important;
+}
+
+/* Fallback to override Ant Design’s max-width and margin if applied inline or via CSS-in-JS */
+:where(.erp-layout .ant-layout-content),
+:where(.erp-layout .ant-layout-content[style*="max-width"]),
+:where(.erp-layout .ant-layout-content[style*="margin"]),
+:where(.erp-layout .ant-layout-content.css-dev-only-do-not-override-bmvakj) {
+  max-width: 100% !important;
+  margin: 10px 0 !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  padding: 0 10px !important;
+}
+
+/* Specifically target Ant Design's CSS-in-JS class to override constraints */
+.erp-layout .ant-layout-content.css-dev-only-do-not-override-bmvakj {
+  max-width: 100% !important;
+  margin: 10px 0 !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  padding: 0 10px !important;
+}
+
+/* Style the content wrapper */
+.erp-content .content-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+  padding: 10px !important;
+  background: #fff !important;
+  min-height: 100vh !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure Ant Design Typography renders correctly (fix vertical text stacking) */
+.erp-content .ant-typography,
+.ant-typography,
+.ant-typography h2 {
+  display: block !important;
+  width: auto !important;
+  min-width: 200px !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Ensure Ant Design Row/Col renders full-width and side by side */
+.erp-layout .erp-content .ant-row,
+.erp-content .ant-row,
+.ant-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+/* Ensure columns render side by side on medium and large screens */
+.erp-layout .erp-content .ant-col,
+.erp-content .ant-col,
+.ant-col {
+  box-sizing: border-box !important;
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.erp-layout .erp-content .ant-col-md-12,
+.erp-content .ant-col-md-12,
+.ant-col-md-12 {
+  flex: 0 0 50% !important;
+  max-width: 50% !important;
+}
+
+.erp-layout .erp-content .ant-col-lg-12,
+.erp-content .ant-col-lg-12,
+.ant-col-lg-12 {
+  flex: 0 0 50% !important;
+  max-width: 50% !important;
+}
+
+/* Align search bar and tier filter in SponsorHub */
+.sponsor-hub-controls {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 16px !important;
+  align-items: center !important;
+  margin-bottom: 16px !important;
+}
+
+/* Force visibility of Ant Design Table and ensure it scales to viewport */
+.erp-content .ant-table,
+.ant-table {
+  display: block !important;
+  visibility: visible !important;
+  height: auto !important;
+  min-height: 200px !important;
+  overflow-x: auto !important; /* Allow horizontal scrolling if needed */
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.erp-content .ant-table-container,
+.ant-table-container {
+  display: block !important;
+  visibility: visible !important;
+  height: auto !important;
+  min-height: 200px !important;
+  overflow-x: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.erp-content .ant-table-content,
+.ant-table-content {
+  display: block !important;
+  visibility: visible !important;
+  height: auto !important;
+  min-height: 200px !important;
+  overflow-x: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.erp-content table,
+table {
+  display: table !important;
+  visibility: visible !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: 200px !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure table headers and cells scale appropriately */
+.erp-content .ant-table-thead,
+.erp-content .ant-table-tbody,
+.erp-content .ant-table-thead > tr > th,
+.erp-content .ant-table-tbody > tr > td {
+  width: auto !important;
+  max-width: 100% !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+/* FullCalendar Styles (ensure calendar renders and scales to viewport) */
+.erp-content .fc,
+.fc {
+  display: block !important;
+  visibility: visible !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 500px !important;
+  overflow-x: auto !important;
+}
+
+.fc-daygrid-body {
+  height: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.fc-daygrid-day-frame {
+  max-height: 60px !important;
+  min-height: 60px !important;
+  overflow: hidden !important;
+  margin: 2px !important;
+}
+
+.fc-event {
+  min-height: 18px !important;
+  padding: 2px 4px !important;
+  font-size: 11px !important;
+  line-height: 12px !important;
+  visibility: visible !important;
+  z-index: 2 !important;
+  background-color: #3174ad !important;
+  color: white !important;
+  border-radius: 4px !important;
+  border: none !important;
+}
+
+.fc-event-main {
+  visibility: visible !important;
+  overflow: hidden !important;
+}
+
+.fc-col-header-cell {
+  padding: 4px !important;
+  font-size: 12px !important;
+  width: auto !important;
+  max-width: 100% !important;
+  text-align: center !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+.fc-col-header {
+  height: 30px !important;
+}
+
+/* React-Big-Calendar Styles (Optional) */
+.rbc-header {
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  padding: 2px 4px !important;
+}
+
+.rbc-calendar {
+  display: block !important;
+  visibility: visible !important;
+  height: 500px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.rbc-day-bg {
+  min-width: 50px !important;
+}
+
+/* Ensure Ant Design notifications are visible on the page */
+.ant-message {
+  position: fixed !important;
+  top: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 10001 !important;
+  width: auto !important;
+  max-width: 90% !important;
+}
+
+.ant-message-notice {
+  padding: 8px 16px !important;
+  background: #fff !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.ant-message-notice-content {
+  display: inline-block !important;
+  padding: 10px 16px !important;
+  background: #fff !important;
+  border-radius: 4px !important;
+  color: #000 !important;
+}
+
+.ant-message-success .ant-message-notice-content {
+  background: #f6ffed !important;
+  border: 1px solid #b7eb8f !important;
+  color: #52c41a !important;
+}
+
+.ant-message-error .ant-message-notice-content {
+  background: #fff1f0 !important;
+  border: 1px solid #ffa39e !important;
+  color: #f5222d !important;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .erp-content {
+    padding: 0 2px !important;
+  }
+
+  .fc {
+    width: 100% !important;
+    min-height: 400px !important;
+  }
+
+  .fc-daygrid-day-frame {
+    max-height: 50px !important;
+    min-height: 50px !important;
+  }
+
+  .fc-event {
+    font-size: 10px !important;
+    padding: 1px 2px !important;
+  }
+
+  .erp-layout .erp-content .ant-col-md-12,
+  .erp-content .ant-col-md-12,
+  .ant-col-md-12 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+
+  .erp-layout .erp-content .ant-col-lg-12,
+  .erp-content .ant-col-lg-12,
+  .ant-col-lg-12 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+
+  .erp-content .ant-table-thead > tr > th,
+  .erp-content .ant-table-tbody > tr > td {
+    font-size: 12px !important;
+    padding: 8px 4px !important;
+  }
+
+  .fc-col-header-cell {
+    font-size: 10px !important;
+    padding: 2px !important;
+  }
+
+  .site-layout-background {
+    padding: 0 8px !important;
+  }
+
+  .site-layout-background .logo {
+    font-size: 16px !important;
+  }
+
+  .site-layout-background .ant-btn-link {
+    font-size: 14px !important;
+    margin-right: 8px !important;
+  }
+}

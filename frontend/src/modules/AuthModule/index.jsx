@@ -1,3 +1,4 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\src\modules\AuthModule\index.jsx
 import useLanguage from '@/locale/useLanguage';
 
 import { Layout, Col, Divider, Typography } from 'antd';

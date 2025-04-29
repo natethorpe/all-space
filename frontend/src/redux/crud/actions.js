@@ -1,5 +1,7 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\src\redux\crud\actions.js
+
 import * as actionTypes from './types';
-import { request } from '@/request';
+import request from '@/request'; // Changed to default import
 
 export const crud = {
   resetState:
@@ -166,7 +168,6 @@ export const crud = {
         });
       }
     },
-
   delete:
     ({ entity, id }) =>
     async (dispatch) => {
@@ -196,7 +197,6 @@ export const crud = {
         });
       }
     },
-
   search:
     ({ entity, options = {} }) =>
     async (dispatch) => {

@@ -1,37 +1,7 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\models\coreModels\Admin.js
+// Purpose: Placeholder for Admin model, now defined in db.js.
+// Notes:
+//   - 04/08/2025: Removed schema definition to prevent OverwriteModelError (User logs, 20:31 UTC).
+//   - Model is now managed centrally in db.js.
 
-const adminSchema = new Schema({
-  removed: {
-    type: Boolean,
-    default: false,
-  },
-  enabled: {
-    type: Boolean,
-    default: false,
-  },
-
-  email: {
-    type: String,
-    lowercase: true,
-    trim: true,
-    required: true,
-  },
-  name: { type: String, required: true },
-  surname: { type: String },
-  photo: {
-    type: String,
-    trim: true,
-  },
-  created: {
-    type: Date,
-    default: Date.now,
-  },
-  role: {
-    type: String,
-    default: 'owner',
-    enum: ['owner'],
-  },
-});
-
-module.exports = mongoose.model('Admin', adminSchema);
+module.exports = require('../../db'); // Export mongoose to allow downstream requires
