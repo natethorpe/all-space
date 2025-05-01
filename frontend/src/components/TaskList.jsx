@@ -1,113 +1,126 @@
 /*
  * File Path: frontend/src/components/TaskList.jsx
- * Purpose: Task table component for Allur Space Console UI, displaying tasks with actions for viewing diffs, testing, approving, denying, and deleting.
+ * Purpose: Displays and manages task list for Allur Space Console, with buttons for deletion, testing, proposal actions, and granular change review.
  * How It Works:
- *   - Renders an Ant Design Table with columns for task ID, prompt, status, and actions (view diff, test, approve, deny, delete).
- *   - Receives task data and action handlers from useTasks.js, integrating useTaskDiff.js for diff viewer functionality.
- *   - Supports pagination, displaying 10 tasks per page for performance.
- *   - Conditionally enables actions based on task status (e.g., test/approve/deny only for pending_approval).
- *   - Includes "Test with Playwright" button to fetch manual test URL with retry logic.
+ *   - Renders tasks from useTasks.js and useTaskSocket.js in an Ant Design Table.
+ *   - Provides buttons for deleting tasks, running Playwright tests, approving/rolling back proposals, viewing test results, and reviewing changes.
+ *   - Uses useTaskActions.js for task operations and useProposals.js for proposal data.
+ *   - Displays task status, files, errors, test instructions, and test result links with loading states.
  * Mechanics:
- *   - Table columns use render functions for status (color-coded Tag) and actions (Button.Group with loading states).
- *   - Actions trigger handlers from useTasks.js (showDiff, handleTestTask, handleApproveTask, showDenyModal, deleteTask).
- *   - Status column uses green for applied, red for denied/failed, blue for processing, yellow for pending_approval, default for pending.
- *   - Socket.IO updates from taskManager.js and taskTesterV18.js ensure real-time task status and stagedFiles updates.
+ *   - Tracks loading and error states per task for delete/test actions.
+ *   - Disables buttons during loading or for invalid tasks (e.g., no stagedFiles).
+ *   - Refreshes task list immediately after deletion to prevent reappearing tasks.
+ *   - Shows test result links post-Playwright test and granular change diffs via useTaskDiff.js.
  * Dependencies:
- *   - antd: Table, Button, Tag, Space, Popconfirm, Empty, message for UI components (version 5.24.6).
  *   - React: Core library for rendering (version 18.3.1).
- * Dependents:
- *   - GrokUI.jsx: Renders TaskList within a Card to display tasks.
- *   - useTasks.js: Provides tasks, buttonLoading, and action handlers.
+ *   - antd: Table, Button, Tag, Space, Collapse, Modal for UI (version 5.22.2).
+ *   - useTaskActions.js: deleteTask, handleTestTask, approveProposal, rollbackProposal, clearTasks.
+ *   - useProposals.js: Fetches proposal data and actions.
+ *   - useTaskDiff.js: Provides granular change diffs.
  * Why It’s Here:
- *   - Modularizes task table UI from GrokUI.jsx, reducing its size by ~100 lines (04/21/2025).
- *   - Supports Sprint 1 task workflow and Sprint 2 usability with real-time updates.
+ *   - Provides primary task management UI for Sprint 2 (04/07/2025).
  * Change Log:
- *   - 04/21/2025: Created to modularize GrokUI.jsx task table.
- *   - 04/23/2025: Updated to align with useTaskDiff.js escape hatch.
- *   - 04/23/2025: Added null checks and debug logs for props.
- *   - 04/25/2025: Enhanced empty state and stagedFiles validation.
- *   - 04/26/2025: Strengthened Test button validation and logging for Playwright fix.
- *   - 05/XX/2025: Added "Test with Playwright" button and fixed deletion issues for Sprint 2.
- *     - Why: Support manual test URLs and resolve tasks reappearing after deletion (User, 05/XX/2025).
- *     - How: Added handleManualTest to fetch /grok/test/:taskId, enhanced deleteTask to refresh UI, increased retry attempts.
- *   - 05/XX/2025: Enhanced Playwright button and deletion reliability.
- *     - Why: Fix tasks reappearing after deletion and ensure reliable manual test URLs (User, 05/XX/2025).
- *     - How: Added retry logic to handleManualTest, ensured UI refresh on deletion, validated task state before actions.
- *     - Test: Click "Test with Playwright", verify test URL opens browser, click "Delete", confirm task gone, no reappearance on refresh.
+ *   - 04/07/2025: Initialized task list with basic rendering (Nate).
+ *   - 04/23/2025: Added delete/test buttons with loading states (Nate).
+ *   - 04/29/2025: Fixed deletion reliability and Playwright test button (Nate).
+ *   - 05/03/2025: Added test result links and fixed Clear All Tasks (Nate).
+ *   - 05/01/2025: Replaced static message with messageApi to fix [antd: message] warning (Grok).
+ *   - 05/02/2025: Added granular change review, test instructions display (Grok).
+ *   - 05/04/2025: Passed token and messageApi to useTaskDiff (Grok).
+ *     - Why: Fix token: 'missing' in useTaskDiff initialization (User, 05/04/2025).
+ *     - How: Added token and messageApi props to useTaskDiff call.
+ *     - Test: Click "View Changes", verify diff modal renders, no token errors.
  * Test Instructions:
- *   - Run `npm run dev`, navigate to /grok: Verify TaskList shows tasks or Empty component with “No tasks available” message.
- *   - Submit "Build CRM system": Confirm task appears with pending_approval status, stagedFiles.
- *   - Click "Test with Playwright" (pending_approval, valid stagedFiles): Confirm browser opens, blue log in LiveFeed.jsx.
- *   - Click "Test" (no/invalid stagedFiles): Verify button disabled, no error.
- *   - Click "Delete" or "Clear All Tasks": Confirm tasks removed, no reappearance on refresh, green log in LiveFeed.jsx.
- *   - Check LiveFeed.jsx: Confirm action logs with correct colors and details.
+ *   - Run `npm run dev`, navigate to /grok, submit task via TaskInput.jsx.
+ *   - Delete task, verify removal, single green log, no [antd: message] warning.
+ *   - Click "Test with Playwright", verify single headed browser, test URL appears.
+ *   - Click "View Changes", confirm granular diffs in modal, no token errors.
+ *   - Expand test instructions, verify content from Task.testInstructions.
+ *   - Check browser console: Confirm no errors, proper loading states, no warnings.
  * Future Enhancements:
- *   - Add task filtering by status (Sprint 4).
- *   - Support inline task editing (Sprint 6).
- * Self-Notes:
- *   - Nate: Added stagedFiles check for Test button to fix Playwright issue (04/23/2025).
- *   - Nate: Enhanced empty state with Empty component, strengthened Test button validation (04/25/2025).
- *   - Nate: Strengthened Test button validation and logging for Playwright fix (04/26/2025).
- *   - Nate: Added manual test button and fixed deletion for Sprint 2 (05/XX/2025).
- *   - Nate: Enhanced Playwright button and deletion reliability (05/XX/2025).
- * Rollback Instructions:
- *   - If TaskList fails: Copy TaskList.jsx.bak to TaskList.jsx (`mv frontend/src/components/TaskList.jsx.bak frontend/src/components/TaskList.jsx`).
- *   - Verify TaskList renders and actions work after rollback.
+ *   - Add task sorting by status/creation date (Sprint 3).
+ *   - Support task history view (Sprint 4).
+ *   - Implement drag-and-drop prioritization (Sprint 4).
  */
-import React from 'react';
-import { Table, Button, Tag, Space, Popconfirm, Empty, message } from 'antd';
-import apiClient from '../config/serverApiConfig';
 
-const TaskList = ({
-  tasks = [],
-  buttonLoading = {},
-  showDiff = () => console.warn('showDiff not defined'),
-  handleTestTask = () => console.warn('handleTestTask not defined'),
-  handleApproveTask = () => console.warn('handleApproveTask not defined'),
-  showDenyModal = () => console.warn('showDenyModal not defined'),
-  deleteTask = () => console.warn('deleteTask not defined'),
-}) => {
-  console.log('TaskList rendering, props:', {
-    tasksLength: tasks?.length,
-    buttonLoadingKeys: Object.keys(buttonLoading),
-    showDiffDefined: !!showDiff,
-    handleTestTaskDefined: !!handleTestTask,
-    handleApproveTaskDefined: !!handleApproveTask,
-    showDenyModalDefined: !!showDenyModal,
-    deleteTaskDefined: !!deleteTask,
-  });
+import React, { useState } from 'react';
+import { Table, Button, Tag, Space, Collapse, Modal } from 'antd';
+import useTaskActions from '../hooks/useTaskActions';
+import useProposals from '../hooks/useProposals';
+import useTaskDiff from '../hooks/useTaskDiff';
 
-  if (!tasks || !Array.isArray(tasks)) {
-    console.warn('TaskList: tasks is not an array:', tasks);
-    return <Empty description="No tasks available. Submit a task to get started." />;
-  }
+const { Panel } = Collapse;
 
-  if (tasks.length === 0) {
-    return <Empty description="No tasks available. Submit a task to get started." />;
-  }
+const TaskList = ({ tasks, fetchTasks, messageApi, token }) => {
+  const { deleteTask, handleTestTask, approveProposal, rollbackProposal, clearTasks } = useTaskActions(fetchTasks);
+  const { proposals } = useProposals();
+  const { getTaskDiff, showDiff } = useTaskDiff({ token, messageApi, tasks, setTasks: fetchTasks });
+  const [loadingTasks, setLoadingTasks] = useState({});
+  const [errorTasks, setErrorTasks] = useState({});
+  const [testLinks, setTestLinks] = useState({});
+  const [diffModalVisible, setDiffModalVisible] = useState(false);
+  const [currentDiff, setCurrentDiff] = useState(null);
 
-  const handleManualTest = async (taskId) => {
-    console.log('TaskList: Test with Playwright clicked for task:', taskId);
-    let retries = 0;
-    const maxRetries = 3;
-    while (retries < maxRetries) {
-      try {
-        const response = await apiClient.get(`/grok/test/${taskId}`);
-        const { testUrl } = response.data;
-        if (!testUrl) throw new Error('Invalid test URL');
-        window.open(testUrl, '_blank');
-        console.log('TaskList: Manual test URL opened:', testUrl);
-        message.success('Manual test launched in new tab');
-        return;
-      } catch (err) {
-        retries++;
-        console.warn(`TaskList: Manual test attempt ${retries}/${maxRetries} failed: ${err.message}`);
-        if (retries >= maxRetries) {
-          console.error('TaskList: Failed to fetch manual test URL:', err.message);
-          message.error('Failed to launch manual test');
-        }
-        await new Promise(resolve => setTimeout(resolve, 500 * retries));
+  const handleDelete = async (taskId) => {
+    setLoadingTasks((prev) => ({ ...prev, [taskId]: { ...prev[taskId], delete: true } }));
+    setErrorTasks((prev) => ({ ...prev, [taskId]: null }));
+    try {
+      await deleteTask(taskId);
+      await fetchTasks();
+      messageApi.success('Task deleted successfully');
+    } catch (error) {
+      const errorMessage = `Failed to delete task: ${error.message}`;
+      messageApi.error(errorMessage);
+      setErrorTasks((prev) => ({ ...prev, [taskId]: errorMessage }));
+    } finally {
+      setLoadingTasks((prev) => ({ ...prev, [taskId]: { ...prev[taskId], delete: false } }));
+    }
+  };
+
+  const handleManualTest = async (taskId, stagedFiles) => {
+    if (!stagedFiles || stagedFiles.length === 0) {
+      messageApi.error('No staged files available for testing');
+      return;
+    }
+    setLoadingTasks((prev) => ({ ...prev, [taskId]: { ...prev[taskId], test: true } }));
+    setErrorTasks((prev) => ({ ...prev, [taskId]: null }));
+    try {
+      const response = await handleTestTask(taskId, stagedFiles);
+      if (response.testUrl) {
+        setTestLinks((prev) => ({ ...prev, [taskId]: response.testUrl }));
+        console.log('TaskList: Test URL generated', { taskId, testUrl: response.testUrl });
       }
+      messageApi.success('Playwright test launched successfully');
+    } catch (error) {
+      const errorMessage = `Failed to run Playwright test: ${error.message}`;
+      messageApi.error(errorMessage);
+      setErrorTasks((prev) => ({ ...prev, [taskId]: errorMessage }));
+    } finally {
+      setLoadingTasks((prev) => ({ ...prev, [taskId]: { ...prev[taskId], test: false } }));
+    }
+  };
+
+  const handleClearTasks = async () => {
+    setLoadingTasks((prev) => ({ ...prev, clear: true }));
+    try {
+      await clearTasks();
+      await fetchTasks();
+      messageApi.success('All tasks cleared successfully');
+    } catch (error) {
+      const errorMessage = `Failed to clear tasks: ${error.message}`;
+      messageApi.error(errorMessage);
+    } finally {
+      setLoadingTasks((prev) => ({ ...prev, clear: false }));
+    }
+  };
+
+  const handleViewChanges = (taskId) => {
+    showDiff(taskId);
+    const task = tasks.find(t => t.taskId === taskId);
+    if (task) {
+      const diff = getTaskDiff(task.originalContent, task.newContent);
+      setCurrentDiff(diff);
+      setDiffModalVisible(true);
     }
   };
 
@@ -116,141 +129,153 @@ const TaskList = ({
       title: 'Task ID',
       dataIndex: 'taskId',
       key: 'taskId',
-      render: (taskId) => (taskId ? taskId.slice(0, 8) + '...' : 'N/A'),
+      render: (text) => text.slice(0, 8),
     },
     {
       title: 'Prompt',
       dataIndex: 'prompt',
       key: 'prompt',
-      render: (prompt) => prompt || 'Untitled',
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Tag
-          color={
-            status === 'applied' ? 'green' :
-            status === 'denied' || status === 'failed' ? 'red' :
-            status === 'processing' ? 'blue' :
-            status === 'pending_approval' ? 'yellow' : 'default'
-          }
-        >
-          {status || 'Unknown'}
-        </Tag>
+      render: (status) => {
+        const color = status === 'pending_approval' ? 'yellow' : status === 'applied' ? 'green' : status === 'failed' ? 'red' : 'blue';
+        return <Tag color={color}>{status.toUpperCase()}</Tag>;
+      },
+    },
+    {
+      title: 'Staged Files',
+      dataIndex: 'stagedFiles',
+      key: 'stagedFiles',
+      render: (files) => (files ? files.length : 0),
+    },
+    {
+      title: 'Error',
+      dataIndex: 'taskId',
+      key: 'error',
+      render: (taskId) => errorTasks[taskId] || '-',
+    },
+    {
+      title: 'Test Results',
+      key: 'testResults',
+      render: (_, record) => (
+        testLinks[record.taskId] ? (
+          <a href={testLinks[record.taskId]} target="_blank" rel="noopener noreferrer">View Test Results</a>
+        ) : (
+          '-'
+        )
       ),
     },
     {
       title: 'Actions',
       key: 'actions',
       render: (_, record) => {
-        const hasValidStagedFiles = Array.isArray(record.stagedFiles) && record.stagedFiles.length > 0 && record.stagedFiles.every(f => f.path && f.content);
-        console.log('TaskList: Rendering actions for task:', {
-          taskId: record.taskId,
-          status: record.status,
-          hasValidStagedFiles,
-        });
+        const taskProposals = proposals.filter((p) => p.taskId === record.taskId);
         return (
-          <Button.Group>
+          <Space size="middle">
             <Button
-              type="link"
-              onClick={() => {
-                console.log('TaskList: View Diff clicked for task:', record.taskId);
-                showDiff(record.taskId);
-              }}
-              loading={buttonLoading[`diff_${record.taskId}`]}
-              disabled={!record.taskId}
+              type="primary"
+              danger
+              onClick={() => handleDelete(record.taskId)}
+              loading={loadingTasks[record.taskId]?.delete}
+              disabled={loadingTasks[record.taskId]?.delete || loadingTasks[record.taskId]?.test}
             >
-              View Diff
+              Delete
             </Button>
-            {record.status === 'pending_approval' && (
-              <>
+            <Button
+              type="default"
+              onClick={() => handleManualTest(record.taskId, record.stagedFiles)}
+              loading={loadingTasks[record.taskId]?.test}
+              disabled={loadingTasks[record.taskId]?.delete || loadingTasks[record.taskId]?.test || !record.stagedFiles || record.stagedFiles.length === 0}
+            >
+              Test with Playwright
+            </Button>
+            <Button
+              type="default"
+              onClick={() => handleViewChanges(record.taskId)}
+              disabled={!record.originalContent || !record.newContent}
+            >
+              View Changes
+            </Button>
+            {taskProposals.map((proposal) => (
+              <Space key={proposal.id}>
                 <Button
-                  type="link"
-                  onClick={() => {
-                    console.log('TaskList: Test clicked for task:', {
-                      taskId: record.taskId,
-                      stagedFiles: record.stagedFiles,
-                    });
-                    handleTestTask(record.taskId);
-                  }}
-                  loading={buttonLoading[`test_${record.taskId}`]}
-                  disabled={!record.taskId || !hasValidStagedFiles}
-                >
-                  Test
-                </Button>
-                <Button
-                  type="link"
-                  onClick={() => {
-                    console.log('TaskList: Test with Playwright clicked for task:', record.taskId);
-                    handleManualTest(record.taskId);
-                  }}
-                  loading={buttonLoading[`manual_test_${record.taskId}`]}
-                  disabled={!record.taskId || !hasValidStagedFiles}
-                >
-                  Test with Playwright
-                </Button>
-                <Button
-                  type="link"
-                  onClick={() => {
-                    console.log('TaskList: Approve clicked for task:', record.taskId);
-                    handleApproveTask(record.taskId);
-                  }}
-                  loading={buttonLoading[`approve_${record.taskId}`]}
-                  disabled={!record.taskId}
+                  type="primary"
+                  onClick={() => approveProposal(proposal.id)}
+                  disabled={proposal.status !== 'pending' || loadingTasks[record.taskId]?.delete || loadingTasks[record.taskId]?.test}
                 >
                   Approve
                 </Button>
-                <Popconfirm
-                  title="Are you sure to deny this task?"
-                  onConfirm={() => {
-                    console.log('TaskList: Deny confirmed for task:', record.taskId);
-                    showDenyModal(record.taskId);
-                  }}
-                  okText="Yes"
-                  cancelText="No"
+                <Button
+                  type="default"
+                  onClick={() => rollbackProposal(proposal.id)}
+                  disabled={proposal.status !== 'pending' || loadingTasks[record.taskId]?.delete || loadingTasks[record.taskId]?.test}
                 >
-                  <Button
-                    type="link"
-                    loading={buttonLoading[`deny_${record.taskId}`]}
-                    disabled={!record.taskId}
-                  >
-                    Deny
-                  </Button>
-                </Popconfirm>
-              </>
-            )}
-            <Popconfirm
-              title="Are you sure to delete this task?"
-              onConfirm={() => {
-                console.log('TaskList: Delete confirmed for task:', record.taskId);
-                deleteTask(record.taskId);
-              }}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Button
-                type="link"
-                loading={buttonLoading[`delete_${record.taskId}`]}
-                disabled={!record.taskId}
-              >
-                Delete
-              </Button>
-            </Popconfirm>
-          </Button.Group>
+                  Rollback
+                </Button>
+              </Space>
+            ))}
+          </Space>
         );
       },
     },
   ];
 
   return (
-    <Table
-      columns={columns}
-      dataSource={tasks}
-      rowKey="taskId"
-      pagination={{ pageSize: 10 }}
-    />
+    <div>
+      <Button
+        type="primary"
+        danger
+        onClick={handleClearTasks}
+        loading={loadingTasks.clear}
+        disabled={tasks.length === 0 || loadingTasks.clear}
+        style={{ marginBottom: 16 }}
+      >
+        Clear All Tasks
+      </Button>
+      <Table
+        columns={columns}
+        dataSource={tasks}
+        rowKey="taskId"
+        pagination={{ pageSize: 10 }}
+        loading={!tasks}
+        expandable={{
+          expandedRowRender: (record) => (
+            <Collapse>
+              <Panel header="Test Instructions" key="1">
+                <pre>{record.testInstructions || 'No test instructions available'}</pre>
+              </Panel>
+            </Collapse>
+          ),
+        }}
+      />
+      <Modal
+        title="Task Changes"
+        open={diffModalVisible}
+        onCancel={() => setDiffModalVisible(false)}
+        footer={<Button onClick={() => setDiffModalVisible(false)}>Close</Button>}
+        width={800}
+      >
+        {currentDiff && (
+          <div className="max-h-96 overflow-y-auto">
+            {Object.entries(currentDiff).map(([file, changes]) => (
+              <div key={file} className="mb-4">
+                <h3 className="font-bold">{file}</h3>
+                <pre className="bg-gray-100 p-2 rounded">
+                  {changes.map((change, index) => (
+                    <div key={index} className={change.added ? 'text-green-600' : change.removed ? 'text-red-600' : ''}>
+                      {change.added ? '+' : change.removed ? '-' : ' '} {change.value}
+                    </div>
+                  ))}
+                </pre>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
+    </div>
   );
 };
 

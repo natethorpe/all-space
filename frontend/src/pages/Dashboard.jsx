@@ -10,7 +10,7 @@
  * Dependencies:
  *   - react, antd: UI components.
  *   - useSponsorDashboard: Data hook for sponsors/summary.
- *   - SponsorHub, Calendar, EventModal, SponsorModal, PendingNotifications: Child components.
+ *   - SponsorHub, SponsorshipSummary, Calendar, EventModal, SponsorModal, PendingNotifications: Child components.
  *   - handlers: handleAddSponsor, handleEventAdd.
  *   - request/request: API utility (api).
  * Connections:
@@ -19,9 +19,10 @@
  * Updates:
  *   - 04/07/2025: Updated with latest props from useSponsorDashboard.
  *   - 04/07/2025 (Grok 3): No changes—verified prop consistency, logs alignment.
- *     - Why: Delete works, but edit/add event/add sponsor failed—backend fixed separately.
- *     - How: Confirmed handleEventAddWrapper, handleAddSponsorSubmit call api correctly.
- *     - Impact: Relies on backend routes added (POST/PUT).
+ *   - 05/03/2025: Added SponsorshipSummary.jsx with /api/sponsors/summary (Grok).
+ *     - Why: Align with updated SponsorshipSummary and fix 404 errors (User, 05/03/2025).
+ *     - How: Replaced summary Card with SponsorshipSummary.jsx.
+ *     - Test: Load /dashboard, verify summary displays without 404 errors.
  * Future Enhancements:
  *   - Add Grok UI integration button for inline analysis.
  *   - Responsive layout tweaks for mobile.
@@ -30,9 +31,10 @@
  */
 
 import React, { useState } from 'react';
-import { Row, Col, Typography, message, Input, Button, Card, Spin } from 'antd';
+import { Row, Col, Typography, message, Input, Button, Spin } from 'antd';
 import useSponsorDashboard from './useSponsorDashboard';
 import SponsorHub from './SponsorHub';
+import SponsorshipSummary from '../components/SponsorshipSummary';
 import Calendar from './Calendar';
 import EventModal from './EventModal';
 import SponsorModal from './SponsorModal';
@@ -115,29 +117,7 @@ const Dashboard = () => {
         <Title level={2}>Dashboard</Title>
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col span={24}>
-            <Card title="Sponsor Summary" loading={!summary.totalSponsors && loading}>
-              {summary.totalSponsors ? (
-                <>
-                  <p>Total Sponsors: {summary.totalSponsors}</p>
-                  <p>Average Fit Score: {(summary.avgFitScore || 0).toFixed(2)}</p>
-                  <p>Total Estimated Cost: ${summary.totalEstCost || 0}</p>
-                  <p>Tier Breakdown:</p>
-                  <ul>
-                    {summary.tiers?.map((tier) => (
-                      <li key={tier._id}>{tier._id}: {tier.count}</li>
-                    ))}
-                  </ul>
-                  <p>Top Prospects:</p>
-                  <ul>
-                    {summary.topProspects?.map((prospect) => (
-                      <li key={prospect._id}>{prospect.name} (Fit Score: {prospect.fit_score})</li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <p>Loading summary...</p>
-              )}
-            </Card>
+            <SponsorshipSummary />
           </Col>
         </Row>
         <Row gutter={[16, 16]}>

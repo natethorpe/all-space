@@ -6,9 +6,10 @@
  *   - 04/07/2025: Enhanced by Grok with AI and UI upgrades.
  *   - 04/08/2025: Added versioning, Redux navigation, fixed API call.
  *   - 04/23/2025: Used useMessage hook to fix Ant Design warning, improved 401 handling.
- *     - Why: Persistent 401 Unauthorized and Ant Design message warning (User, 04/23/2025).
- *     - How: Ensured App.useApp for message, added specific 401 message, added logging.
- *     - Test: Login with admin@idurarapp.com/admin123, expect redirect or clear 401 message.
+ *   - 05/03/2025: Added data-testid attributes for Playwright testing (Grok).
+ *     - Why: Fix Playwright 500 error due to missing selectors (User, 05/03/2025).
+ *     - How: Added data-testid to email and password inputs.
+ *     - Test: Run Playwright test, verify auto-login succeeds.
  * Notes:
  *   - Monitors login attempts, logs success/failure.
  *   - Future: Add MFA, OAuth support.
@@ -77,14 +78,14 @@ const Login = () => {
           <Title level={2} style={{ textAlign: 'center' }}>Welcome Back</Title>
           <Form layout="vertical" onFinish={onFinish}>
             <Form.Item name="email" rules={[{ required: true, message: 'Please enter your email' }]}>
-              <Input prefix={<UserOutlined />} placeholder="Email" size="large" />
+              <Input prefix={<UserOutlined />} placeholder="Email" size="large" data-testid="email-input" />
             </Form.Item>
             <Form.Item name="password" rules={[{ required: true, message: 'Please enter your password' }]}>
-              <Input.Password prefix={<LockOutlined />} placeholder="Password" size="large" />
+              <Input.Password prefix={<LockOutlined />} placeholder="Password" size="large" data-testid="password-input" />
             </Form.Item>
             {aiTip && <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>{aiTip}</Text>}
             <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loading} size="large" block style={{ borderRadius: 4 }}>
+              <Button type="primary" htmlType="submit" loading={loading} size="large" block style={{ borderRadius: 4 }} data-testid="submit-button">
                 Log In
               </Button>
             </Form.Item>

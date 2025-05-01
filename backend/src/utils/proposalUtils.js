@@ -12,42 +12,42 @@
  * Dependencies:
  *   - mongoose: BackendProposal, Log models (version 8.13.2).
  *   - socket.js: getIO for Socket.IO (version 4.8.1).
- *   - winston: Console logging (version 3.17.0, file transport removed).
+ *   - winston: Console logging (version 3.17.0).
  *   - path: File path manipulation (Node.js built-in).
  *   - fs.promises: File operations (Node.js built-in).
+ *   - logUtils.js: MongoDB logging.
+ *   - db.js: getModel for model access.
+ *   - taskValidator.js: isValidTaskId for task validation.
  * Dependents:
  *   - taskManager.js: Calls createProposals for task processing.
  *   - proposalRoutes.js: Indirectly uses via taskManager.js for approve/rollback actions.
  * Why It’s Here:
  *   - Resolves circular dependency warning in taskManager.js by isolating proposal creation logic (04/28/2025).
  * Change Log:
- *   - 04/28/2025: Created by extracting createProposals from taskManager.js.
- *   - 04/30/2025: Transitioned logging to MongoDB Log model.
- *     - Why: Replace filesystem logs with database storage (User, 04/30/2025).
- *     - How: Replaced winston file transport with Log.create, updated all log calls.
- *     - Test: Verify idurar_db.logs contains proposal creation logs, no grok.log writes.
+ *   - 04/28/2025: Created by extracting createProposals from taskManager.js (Nate).
+ *   - 04/30/2025: Transitioned logging to MongoDB Log model, aligned with provided version (Grok).
+ *     - Why: Replace filesystem logs with database storage, ensure compatibility (User, 04/30/2025).
+ *     - How: Replaced winston file transport with logUtils.js, updated logging calls.
  * Test Instructions:
  *   - Run `npm start`: Verify server starts, no circular dependency warning.
  *   - POST /grok/edit with "Add crypto wallet": Confirm BackendProposal created, idurar_db.logs logs creation, yellow log in LiveFeed.jsx.
  *   - Check idurar_db.backendproposals: Verify proposal data (taskId, file, content, status).
  *   - Check idurar_db.logs: Confirm proposal logs, no filesystem writes.
+ * Rollback Instructions:
+ *   - Revert to proposalUtils.js.bak (`mv backend/src/utils/proposalUtils.js.bak backend/src/utils/proposalUtils.js`).
+ *   - Verify /grok/edit works post-rollback.
  * Future Enhancements:
  *   - Add proposal versioning support (Sprint 5).
  *   - Integrate with systemAnalyzer.js for proposal validation (Sprint 3).
- * Self-Notes:
- *   - Nate: Extracted createProposals to fix circular dependency (04/28/2025).
- *   - Nate: Transitioned to MongoDB logging (04/30/2025).
  */
-const mongoose = require('mongoose');
-const { getIO } = require('../socket');
-const winston = require('winston');
-const path = require('path');
+
 const fs = require('fs').promises;
+const path = require('path');
+const winston = require('winston');
+const { getIO } = require('../socket');
 const { isValidTaskId } = require('./taskValidator');
 const { getModel } = require('../db');
-
-const BackendProposal = getModel('BackendProposal');
-const Log = getModel('Log');
+const { logInfo, logWarn, logError, logDebug } = require('./logUtils');
 
 const logger = winston.createLogger({
   level: 'debug',
@@ -60,26 +60,19 @@ const logger = winston.createLogger({
 async function createProposals(taskId, backendChanges) {
   console.log('proposalUtils: createProposals called with taskId:', taskId, 'backendChanges:', backendChanges.length);
   if (!isValidTaskId(taskId)) {
-    await Log.create({
-      level: 'error',
-      message: 'Invalid taskId',
-      context: 'proposalUtils',
-      details: { taskId },
-      timestamp: new Date().toISOString(),
-    });
+    await logError('Invalid taskId', 'proposalUtils', { taskId, timestamp: new Date().toISOString() });
     throw new Error('Invalid taskId');
   }
   if (!backendChanges || !Array.isArray(backendChanges)) {
-    await Log.create({
-      level: 'warn',
-      message: 'Invalid backendChanges',
-      context: 'proposalUtils',
-      details: { taskId, backendChanges },
+    await logWarn('Invalid backendChanges', 'proposalUtils', {
+      taskId,
+      backendChanges,
       timestamp: new Date().toISOString(),
     });
     return [];
   }
 
+  const BackendProposal = await getModel('BackendProposal');
   const proposals = [];
   for (const change of backendChanges) {
     let { file, change: changeText, reason } = change;
@@ -99,11 +92,9 @@ async function createProposals(taskId, backendChanges) {
       reason = 'Add initial crypto wallet balance endpoint for Allur Crypto integration';
     }
     if (!file || !changeText || !reason) {
-      await Log.create({
-        level: 'warn',
-        message: 'Skipping invalid backend change',
-        context: 'proposalUtils',
-        details: { taskId, change },
+      await logWarn('Skipping invalid backend change', 'proposalUtils', {
+        taskId,
+        change,
         timestamp: new Date().toISOString(),
       });
       continue;
@@ -122,11 +113,10 @@ async function createProposals(taskId, backendChanges) {
         });
         await proposal.save();
         proposals.push(proposal);
-        await Log.create({
-          level: 'debug',
-          message: 'Created BackendProposal',
-          context: 'proposalUtils',
-          details: { taskId, proposalId: proposal._id, file },
+        await logDebug('Created BackendProposal', 'proposalUtils', {
+          taskId,
+          proposalId: proposal._id,
+          file,
           timestamp: new Date().toISOString(),
         });
         await fs.appendFile(
@@ -140,19 +130,16 @@ async function createProposals(taskId, backendChanges) {
         break;
       } catch (err) {
         attempt++;
-        await Log.create({
-          level: 'warn',
-          message: `Proposal save attempt ${attempt}/${maxAttempts} failed: ${err.message}`,
-          context: 'proposalUtils',
-          details: { taskId, change },
+        await logWarn(`Proposal save attempt ${attempt}/${maxAttempts} failed: ${err.message}`, 'proposalUtils', {
+          taskId,
+          change,
           timestamp: new Date().toISOString(),
         });
         if (attempt >= maxAttempts) {
-          await Log.create({
-            level: 'error',
-            message: `Failed to create BackendProposal: ${err.message}`,
-            context: 'proposalUtils',
-            details: { taskId, change, stack: err.stack },
+          await logError(`Failed to create BackendProposal: ${err.message}`, 'proposalUtils', {
+            taskId,
+            change,
+            stack: err.stack,
             timestamp: new Date().toISOString(),
           });
           await fs.appendFile(
@@ -167,11 +154,8 @@ async function createProposals(taskId, backendChanges) {
 
   if (proposals.length > 0) {
     getIO().emit('backendProposal', { taskId, proposals });
-    await Log.create({
-      level: 'info',
-      message: `Emitted backendProposal event for ${proposals.length} proposals`,
-      context: 'proposalUtils',
-      details: { taskId },
+    await logInfo(`Emitted backendProposal event for ${proposals.length} proposals`, 'proposalUtils', {
+      taskId,
       timestamp: new Date().toISOString(),
     });
   }

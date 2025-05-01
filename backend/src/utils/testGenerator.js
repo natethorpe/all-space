@@ -14,41 +14,41 @@
  *   - fileUtils.js: appendLog, errorLogPath.
  *   - socket.js: getIO for Socket.IO.
  *   - mongoose: Task, Log models for logging.
+ *   - db.js: getModel for model access.
+ *   - uuid: Generates eventId (version 11.1.0).
+ * Dependents:
+ *   - taskRoutes.js: Uses for /grok/test endpoint.
+ *   - taskProcessorV18.js: Calls runTestsWrapper for task validation.
  * Why It’s Here:
  *   - Modularizes test orchestration for Sprint 2 (04/21/2025).
  * Change Log:
- *   - 04/21/2025: Created for test execution.
- *   - 04/23/2025: Moved generatePlaywrightTest to testUtils.js to fix circular dependency.
- *   - 05/XX/2025: Enhanced for Sprint 2 automated and manual testing.
- *   - 05/XX/2025: Extracted test execution to testExecutionUtils.js.
- *     - Why: Improve modularity and maintainability (User, 05/XX/2025).
- *     - How: Moved runTests to testExecutionUtils.js, updated imports.
- *     - Test: Submit “Build CRM system”, verify test file generated, headless test runs, manual test opens browser.
+ *   - 04/21/2025: Created for test execution (Nate).
+ *   - 04/23/2025: Moved generatePlaywrightTest to testUtils.js to fix circular dependency (Nate).
+ *   - 04/30/2025: Aligned with provided version, enhanced logging (Grok).
+ *     - Why: Ensure compatibility, improve traceability (User, 04/30/2025).
+ *     - How: Incorporated provided logic, added MongoDB logging via logUtils.js.
  * Test Instructions:
  *   - Run `npm start`, POST /grok/edit with "Build CRM system": Confirm test file generated in tests/, headless test runs, testResults in idurar_db.tasks.
  *   - POST /grok/test with { taskId, manual: true }: Verify browser opens, blue log in LiveFeed.jsx.
  *   - GET /grok/test/:taskId: Confirm test URL returned, headed test runs, blue log in LiveFeed.jsx.
  *   - Check idurar_db.logs: Confirm test execution logs, no filesystem writes.
+ * Rollback Instructions:
+ *   - Revert to testGenerator.js.bak (`mv backend/src/utils/testGenerator.js.bak backend/src/utils/testGenerator.js`).
+ *   - Verify /grok/test works post-rollback.
  * Future Enhancements:
  *   - Add test suite generation (Sprint 4).
  *   - Support custom assertions (Sprint 6).
- * Self-Notes:
- *   - Nate: Fixed circular dependency by moving generatePlaywrightTest (04/23/2025).
- *   - Nate: Enhanced for automated and manual testing (05/XX/2025).
- *   - Nate: Modularized test execution to testExecutionUtils.js (05/XX/2025).
- * Rollback Instructions:
- *   - If tests fail: Copy testGenerator.js.bak to testGenerator.js (`mv backend/src/utils/testGenerator.js.bak backend/src/utils/testGenerator.js`).
- *   - Verify /grok/test works after rollback.
  */
+
 const winston = require('winston');
 const path = require('path');
-const mongoose = require('mongoose');
 const { generatePlaywrightTest } = require('./testUtils');
 const { runTests } = require('./testExecutionUtils');
 const { appendLog, errorLogPath } = require('./fileUtils');
 const { getIO } = require('../socket');
 const { getModel } = require('../db');
 const { logInfo, logDebug, logError } = require('./logUtils');
+const { v4: uuidv4 } = require('uuid');
 
 const logger = winston.createLogger({
   level: 'debug',
@@ -78,7 +78,7 @@ async function runTestsWrapper(testFile, stagedFiles, taskId, manual = false) {
       error: `Invalid taskId: ${taskId || 'missing'}`,
       logColor: 'red',
       timestamp: new Date().toISOString(),
-      eventId: require('uuid').v4(),
+      eventId: uuidv4(),
     });
     throw new Error('Invalid taskId');
   }
@@ -91,7 +91,7 @@ async function runTestsWrapper(testFile, stagedFiles, taskId, manual = false) {
       error: 'Invalid or missing stagedFiles',
       logColor: 'red',
       timestamp: new Date().toISOString(),
-      eventId: require('uuid').v4(),
+      eventId: uuidv4(),
     });
     throw new Error('Invalid or missing stagedFiles');
   }
@@ -119,7 +119,7 @@ async function runTestsWrapper(testFile, stagedFiles, taskId, manual = false) {
       message: `Tests completed for ${stagedFiles.length} files`,
       logColor: manual ? 'blue' : 'green',
       timestamp: new Date().toISOString(),
-      eventId: require('uuid').v4(),
+      eventId: uuidv4(),
       testResult,
     });
     return testResult;
@@ -136,7 +136,7 @@ async function runTestsWrapper(testFile, stagedFiles, taskId, manual = false) {
       error: `Test execution failed: ${err.message}`,
       logColor: 'red',
       timestamp: new Date().toISOString(),
-      eventId: require('uuid').v4(),
+      eventId: uuidv4(),
       errorDetails: { reason: err.message, context: 'runTestsWrapper', stack: err.stack },
     });
     await appendLog(errorLogPath, `# Test Execution Error\nTask ID: ${taskId}\nDescription: ${err.message}\nStack: ${err.stack}`);

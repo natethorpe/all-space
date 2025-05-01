@@ -1,64 +1,53 @@
 /*
- * File Path: frontend/src/hooks/useTaskDiff.js
+ * File Path: frontend/src/hooks/useTaskDiff.jsx
  * Purpose: Manages task diff viewer state and actions for Allur Space Console.
  * How It Works:
- *   - Handles code diff display, fetching file content (/grok/file-content), and test instructions in a Drawer.
- *   - Listens to Socket.IO fileContentUpdate events for real-time diff updates.
+ *   - Fetches task content (/grok/file-content) and computes granular diffs using jsdiff.
+ *   - Displays diffs, test instructions, staged/generated files, and uploaded files in a modal.
+ *   - Listens to Socket.IO fileContentUpdate events for real-time updates.
  * Mechanics:
- *   - Uses react-diff-viewer-continued for diff rendering, validates taskId.
+ *   - Uses jsdiff for line-by-line diff computation.
+ *   - Validates taskId and handles API errors (401/500).
  *   - Initializes selectedTask with safe defaults to prevent null errors.
  * Dependencies:
- *   - React: useState, useEffect, useRef for state and lifecycle.
- *   - antd: message, Drawer for UI.
- *   - react-diff-viewer-continued: Diff rendering.
- *   - axios: apiClient for API calls.
+ *   - React: useState, useEffect, useRef for state and lifecycle (version 18.3.1).
+ *   - antd: message for notifications (version 5.22.2).
+ *   - diff: Computes text differences (version 5.2.0).
+ *   - axios: apiClient for API calls (version 1.8.4).
  *   - socket.io-client: Real-time updates (version 4.8.1).
- *   - moment: Timestamp formatting.
  * Dependents:
- *   - useTasks.js: Integrates showDiff and diff state.
- *   - TaskList.jsx: Uses showDiff for “View Diff” action.
- *   - GrokUI.jsx: Renders diff Drawer.
+ *   - TaskList.jsx: Uses showDiff for “View Changes” action.
+ *   - GrokUI.jsx: Provides token and navigate.
  * Why It’s Here:
- *   - Modularizes diff logic from useTasks.js for Sprint 2, ~150 lines (04/23/2025).
+ *   - Modularizes diff logic for Sprint 2, ~150 lines (04/23/2025).
  * Change Log:
  *   - 04/23/2025: Extracted from useTasks.js, fixed JSX syntax error.
- *     - Why: Invalid object return in JSX (User, 04/23/2025).
- *     - How: Moved showDiff to export object, kept Drawer JSX.
- *     - Test: Click “View Diff” in TaskList, verify drawer, check console.
  *   - 04/23/2025: Fixed runtime error with API error handling.
- *     - Why: Address /grok runtime error from API failures (User, 04/23/2025).
- *     - How: Added 401/500 error handling in showDiff, initialized selectedTask with safe defaults, added debug logs for API calls, strengthened Socket.IO error handling.
  *   - 04/25/2025: Fixed TypeError due to undefined props.
- *     - Why: useTaskDiff called without required props, causing destructuring error (User, 04/25/2025).
- *     - How: Added default props with null checks, simplified prop requirements, updated logging for missing props.
- *     - Test: Click View Diff in TaskList, verify drawer renders without TypeError, check console for no errors.
+ *   - 05/02/2025: Replaced react-diff-viewer with jsdiff, added testInstructions and uploadedFiles.
+ *   - 05/03/2025: Fixed diff import error by using named exports (Grok).
+ *     - Why: Resolve SyntaxError due to default import of diff (User, 05/03/2025).
+ *     - How: Changed `import diff from 'diff'` to `import * as Diff from 'diff'`.
+ *     - Test: Load /grok, click “View Changes”, verify modal renders without errors.
  * Test Instructions:
- *   - Run `npm run dev`, navigate to /grok, click “View Diff” in TaskList: Verify drawer shows diff, test instructions, staged/generated files, no TypeError.
- *   - Submit “Build CRM system”: Confirm fileContentUpdate updates diff, blue log in LiveFeed.
- *   - Clear localStorage.auth: Verify redirect to /login on “View Diff”, error in LiveFeed.
- * Future Enhancements:
- *   - Add diff syntax highlighting (Sprint 4).
- *   - Support file-specific diffs (Sprint 5).
- * Self-Notes:
- *   - Nate: Extracted diff logic, fixed JSX syntax (04/23/2025).
- *   - Nate: Fixed runtime error with 401 handling, safe defaults, debug logs (04/23/2025).
- *   - Nate: Fixed TypeError with default props and null checks (04/25/2025).
+ *   - Run `npm run dev`, navigate to /grok, submit “Create inventory system”.
+ *   - Click “View Changes” in TaskList: Verify modal shows granular diffs, test instructions, staged/generated/uploaded files.
+ *   - Submit “Add MFA to login” with a file: Confirm uploadedFiles listed in modal.
+ *   - Clear localStorage.auth: Verify redirect to /login on “View Changes”.
+ *   - Check console: No SyntaxError or TypeError, valid API calls.
  * Rollback Instructions:
- *   - If diff drawer fails or crashes: Copy useTaskDiff.js.bak to useTaskDiff.js (`mv frontend/src/hooks/useTaskDiff.js.bak frontend/src/hooks/useTaskDiff.js`).
- *   - Verify “View Diff” works after rollback.
+ *   - Revert to useTaskDiff.jsx.bak (`mv frontend/src/hooks/useTaskDiff.jsx.bak frontend/src/hooks/useTaskDiff.jsx`).
+ *   - Verify “View Changes” works after rollback.
+ * Future Enhancements:
+ *   - Add syntax highlighting for diffs (Sprint 4).
+ *   - Support file-specific diffs (Sprint 5).
  */
+
 import { useState, useEffect, useRef } from 'react';
-import { message, Drawer } from 'antd';
-import DiffViewer from 'react-diff-viewer-continued';
+import { message } from 'antd';
+import * as Diff from 'diff'; // Use named imports instead of default
 import apiClient from '../config/serverApiConfig';
 import io from 'socket.io-client';
-import moment from 'moment';
-
-const getBaseName = (filePath) => {
-  if (typeof filePath !== 'string' || !filePath) return filePath || 'Unknown';
-  const parts = filePath.split(/[\\/]/);
-  return parts[parts.length - 1] || filePath;
-};
 
 const useTaskDiff = ({ token = null, navigate = () => {}, messageApi = null, tasks = [], setTasks = () => {} } = {}) => {
   console.log('useTaskDiff: Initializing with parameters:', {
@@ -69,9 +58,7 @@ const useTaskDiff = ({ token = null, navigate = () => {}, messageApi = null, tas
   });
 
   const [selectedTask, setSelectedTask] = useState(null);
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const [buttonLoading, setButtonLoading] = useState({});
-  const taskPromptsRef = useRef({});
+  const [diffs, setDiffs] = useState({});
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -87,17 +74,21 @@ const useTaskDiff = ({ token = null, navigate = () => {}, messageApi = null, tas
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     });
-    socketRef.current.on('fileContentUpdate', ({ taskId, originalContent, newContent, stagedFiles, generatedFiles, proposedChanges }) => {
+    socketRef.current.on('fileContentUpdate', ({ taskId, originalContent, newContent, stagedFiles, generatedFiles, proposedChanges, testInstructions, uploadedFiles }) => {
       console.log('useTaskDiff: fileContentUpdate received:', { taskId, stagedFilesLength: stagedFiles?.length });
       if (selectedTask?.taskId === taskId) {
+        const newDiffs = getTaskDiff(originalContent || {}, newContent || {});
         setSelectedTask((prev) => ({
           ...prev,
-          originalContent: originalContent || prev?.originalContent || '// No original content',
-          newContent: newContent || prev?.newContent || '// No modified content',
+          originalContent: originalContent || prev?.originalContent || {},
+          newContent: newContent || prev?.newContent || {},
           stagedFiles: Array.isArray(stagedFiles) ? stagedFiles : prev?.stagedFiles || [],
           generatedFiles: Array.isArray(generatedFiles) ? generatedFiles : prev?.generatedFiles || [],
           proposedChanges: Array.isArray(proposedChanges) ? proposedChanges : prev?.proposedChanges || [],
+          testInstructions: testInstructions || prev?.testInstructions || 'No test instructions available',
+          uploadedFiles: Array.isArray(uploadedFiles) ? uploadedFiles : prev?.uploadedFiles || [],
         }));
+        setDiffs(newDiffs);
       }
     });
     socketRef.current.on('connect_error', (err) => {
@@ -111,6 +102,28 @@ const useTaskDiff = ({ token = null, navigate = () => {}, messageApi = null, tas
       }
     };
   }, [token, messageApi]);
+
+  /**
+   * Computes granular diffs between original and new content.
+   * @param {Object} originalContent - Original file contents.
+   * @param {Object} newContent - New file contents.
+   * @returns {Object} Diffs by file path.
+   */
+  const getTaskDiff = (originalContent = {}, newContent = {}) => {
+    const diffs = {};
+    const allFiles = [...new Set([...Object.keys(originalContent), ...Object.keys(newContent)])];
+
+    allFiles.forEach(file => {
+      const original = originalContent[file] || '';
+      const updated = newContent[file] || '';
+      const changes = Diff.diffLines(original, updated); // Use Diff.diffLines
+      if (changes.some(change => change.added || change.removed)) {
+        diffs[file] = changes;
+      }
+    });
+
+    return diffs;
+  };
 
   const showDiff = async (taskId) => {
     console.log('useTaskDiff: showDiff called with taskId:', taskId);
@@ -126,46 +139,26 @@ const useTaskDiff = ({ token = null, navigate = () => {}, messageApi = null, tas
     }
 
     try {
-      setButtonLoading((prev) => ({ ...prev, [`diff_${taskId}`]: true }));
       console.log('useTaskDiff: Fetching file content for taskId:', taskId);
       const res = await apiClient.get(`/grok/file-content?taskId=${taskId}`);
       const taskData = res.data;
 
-      const original = taskData.originalContent && Object.keys(taskData.originalContent).length > 0
-        ? Object.entries(taskData.originalContent).map(([key, value]) => `// ${key}.jsx\n${value}`).join('\n\n')
-        : '// No original content available';
-      const modified = taskData.newContent && Object.keys(taskData.newContent).length > 0
-        ? Object.entries(taskData.newContent).filter(([_, value]) => value && !value.includes('undefined') && value !== 'Timeout')
-          .map(([key, value]) => `// ${key}.jsx\n${value}`).join('\n\n')
-        : '// No modified content available';
-
-      const taskPrompt = taskPromptsRef.current[taskId] || tasks.find((t) => t.taskId === taskId)?.prompt || 'Untitled';
-      let testInstructions = 'Test Instructions:\n';
-      if (taskPrompt.toLowerCase().includes('crm system') || taskPrompt.toLowerCase().includes('entire crm')) {
-        testInstructions += [
-          `- Login: Open http://localhost:3000/login, verify login form renders`,
-          `- Dashboard: Open http://localhost:3000/dashboard, check navigation`,
-          `- SponsorProfile: Open http://localhost:3000/sponsor/1, confirm profile loads`,
-          `- EmployeeLog: Open http://localhost:3000/employee-log, test "Add Employee" and "Clock In"`,
-          `- Settings: Open http://localhost:3000/settings, verify settings UI`,
-        ].join('\n');
-      } else {
-        const target = taskPrompt.toLowerCase().includes('login') ? 'login' : 'grok';
-        testInstructions += [`- Open http://localhost:3000/${target}`, `- Verify page renders and basic functionality works`].join('\n');
-      }
+      const task = tasks.find(t => t.taskId === taskId) || {};
+      const diffs = getTaskDiff(taskData.originalContent || {}, taskData.newContent || {});
 
       setSelectedTask({
-        originalContent: original,
-        newContent: modified,
-        testInstructions,
         taskId,
-        prompt: taskPrompt,
+        prompt: task.prompt || 'Untitled',
+        originalContent: taskData.originalContent || {},
+        newContent: taskData.newContent || {},
         stagedFiles: Array.isArray(taskData.stagedFiles) ? taskData.stagedFiles : [],
         generatedFiles: Array.isArray(taskData.generatedFiles) ? taskData.generatedFiles : [],
-        proposedChanges: Array.isArray(taskData.proposedChanges) ? proposedChanges : [],
+        proposedChanges: Array.isArray(taskData.proposedChanges) ? taskData.proposedChanges : [],
+        testInstructions: taskData.testInstructions || task.testInstructions || 'No test instructions available',
+        uploadedFiles: Array.isArray(taskData.uploadedFiles) ? taskData.uploadedFiles : [],
       });
-      setDrawerVisible(true);
-      console.log('useTaskDiff: Diff drawer opened for taskId:', taskId);
+      setDiffs(diffs);
+      console.log('useTaskDiff: Diff computed for taskId:', taskId);
     } catch (err) {
       const errorMessage = err.response?.status === 401 ? 'Authentication failed: Invalid token' : 'Failed to load task content';
       console.error('useTaskDiff: showDiff error:', errorMessage, err);
@@ -174,53 +167,16 @@ const useTaskDiff = ({ token = null, navigate = () => {}, messageApi = null, tas
         console.warn('useTaskDiff: Redirecting to /login due to 401');
         setTimeout(() => navigate('/login'), 2000);
       }
-    } finally {
-      setButtonLoading((prev) => ({ ...prev, [`diff_${taskId}`]: false }));
     }
   };
 
-  const drawerContent = (
-    <Drawer
-      title={`Task Diff: ${selectedTask?.prompt || 'Untitled'}`}
-      placement="right"
-      onClose={() => {
-        console.log('useTaskDiff: Closing diff drawer');
-        setDrawerVisible(false);
-        setSelectedTask(null);
-      }}
-      open={drawerVisible}
-      width="80%"
-    >
-      {selectedTask && (
-        <>
-          <h3>Test Instructions</h3>
-          <pre>{selectedTask.testInstructions}</pre>
-          <h3>Code Diff</h3>
-          <DiffViewer
-            oldValue={selectedTask.originalContent}
-            newValue={selectedTask.newContent}
-            splitView={true}
-            showDiffOnly={true}
-            styles={{ contentText: { fontFamily: 'monospace', fontSize: 12 } }}
-          />
-          <h3>Staged Files</h3>
-          <ul>{selectedTask.stagedFiles?.map((file, index) => <li key={index}>{getBaseName(file)}</li>) || <li>No staged files</li>}</ul>
-          <h3>Generated Files</h3>
-          <ul>{selectedTask.generatedFiles?.map((file, index) => <li key={index}>{getBaseName(file)}</li>) || <li>No generated files</li>}</ul>
-        </>
-      )}
-    </Drawer>
-  );
-
   return {
     showDiff,
-    buttonLoading,
-    setButtonLoading,
     selectedTask,
     setSelectedTask,
-    drawerVisible,
-    setDrawerVisible,
-    drawerContent,
+    diffs,
+    setDiffs,
+    getTaskDiff,
   };
 };
 

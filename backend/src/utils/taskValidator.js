@@ -2,11 +2,13 @@
  * File Path: backend/src/utils/taskValidator.js
  * Purpose: Centralizes task and stagedFiles validation for Allur Space Console.
  * How It Works:
- *   - Provides isValidTaskId and isValidStagedFiles functions to ensure valid taskId and stagedFiles data.
+ *   - Provides isValidTaskId, isValidStagedFiles, isValidTask, and isValidFiles functions to ensure valid taskId, task data, and stagedFiles.
  *   - Logs validation failures to grok.log for debugging.
  * Mechanics:
  *   - isValidTaskId: Checks taskId is a string and matches UUID regex.
  *   - isValidStagedFiles: Verifies stagedFiles is a non-empty array of objects with path and content.
+ *   - isValidTask: Validates taskId, prompt, and stagedFiles integrity.
+ *   - isValidFiles: Alias for isValidStagedFiles for compatibility.
  * Dependencies:
  *   - winston: Logging to grok.log (version 3.17.0).
  * Dependents:
@@ -15,17 +17,20 @@
  *   - Created for Sprint 2 to reduce validation duplication and fix stagedFiles errors (04/23/2025).
  * Change Log:
  *   - 04/23/2025: Created to centralize validation logic.
- *     - Why: Fix stagedFiles undefined errors and improve modularity (User, 04/23/2025).
- *     - How: Implemented isValidTaskId, isValidStagedFiles with logging.
- *     - Test: Submit "Build CRM system", verify no invalid stagedFiles errors.
+ *   - 04/30/2025: Added isValidTask and isValidFiles to fix 500 error (Grok).
+ *     - Why: TypeError: isValidTask is not a function in taskManager.js (User, 04/30/2025).
+ *     - How: Added isValidTask to validate taskId, prompt, and stagedFiles; added isValidFiles as alias for isValidStagedFiles.
+ *     - Test: POST /api/grok/edit with "Build CRM system", verify no 500 error, task created in idurar_db.tasks.
  * Test Instructions:
- *   - Run `npm start`, submit "Build CRM system": Confirm no validation errors in grok.log.
+ *   - Run `npm start`, POST /api/grok/edit with "Build CRM system": Confirm no 500 error, task created in idurar_db.tasks.
  *   - Submit invalid taskId or empty stagedFiles: Verify error logs in grok.log.
+ * Rollback Instructions:
+ *   - Revert to taskValidator.js.bak (`mv backend/src/utils/taskValidator.js.bak backend/src/utils/taskValidator.js`).
+ *   - Verify /api/grok/edit works post-rollback.
  * Future Enhancements:
  *   - Add schema validation for task fields (Sprint 4).
- * Self-Notes:
- *   - Nate: Created for Sprint 2 modularity and reliability (04/23/2025).
  */
+
 const winston = require('winston');
 const path = require('path');
 
@@ -56,4 +61,18 @@ function isValidStagedFiles(stagedFiles) {
   return isValid;
 }
 
-module.exports = { isValidTaskId, isValidStagedFiles };
+function isValidTask(taskId, prompt, stagedFiles) {
+  const isValid = isValidTaskId(taskId) && 
+                  typeof prompt === 'string' && prompt.trim().length > 0 && 
+                  isValidStagedFiles(stagedFiles);
+  if (!isValid) {
+    logger.warn(`Invalid task: taskId=${taskId}, prompt=${prompt}, stagedFiles=${JSON.stringify(stagedFiles)}`, { stack: new Error().stack });
+  }
+  return isValid;
+}
+
+function isValidFiles(stagedFiles) {
+  return isValidStagedFiles(stagedFiles);
+}
+
+module.exports = { isValidTaskId, isValidStagedFiles, isValidTask, isValidFiles };

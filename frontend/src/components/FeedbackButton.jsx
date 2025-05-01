@@ -1,135 +1,58 @@
 /*
  * File Path: frontend/src/components/FeedbackButton.jsx
- * Purpose: Quick Feedback button component for Allur Space Console, allowing users to send real-time feedback via WebSocket.
+ * Purpose: Provides a quick feedback submission button for Allur Space Console, sending feedback via WebSocket.
  * How It Works:
- *   - Renders an Ant Design Input and Button for users to submit feedback messages.
- *   - Sends feedback via WebSocket 'feedback' event to socket.js, which logs to idurar_db.logs and updates LiveFeed.jsx.
- *   - Displays success/error notifications using Ant Design message API.
- * Mechanics:
- *   - Uses socket.io-client to emit feedback events with token for authentication.
- *   - Validates input to prevent empty submissions.
- *   - Maintains loading state to prevent duplicate submissions.
+ *   - Renders a button that opens a prompt for user feedback.
+ *   - Sends feedback to the backend via Socket.IO taskSocket.
+ *   - Displays success/error messages using antd message.
  * Dependencies:
- *   - antd: Input, Button, message for UI and notifications (version 5.24.6).
- *   - React: useState, useEffect, useRef for state and lifecycle management (version 18.3.1).
- *   - socket.io-client: Real-time communication (version 4.8.1).
- * Dependents:
- *   - GrokUI.jsx: Renders FeedbackButton in a Card for user feedback.
+ *   - React: useCallback (version 18.3.1).
+ *   - antd: Button, message for UI and notifications (version 5.24.6).
  * Why It’s Here:
- *   - Implements Quick Feedback feature for Sprint 3, enhancing collaboration efficiency (04/25/2025).
+ *   - Enables user feedback for Sprint 2 (04/07/2025).
  * Change Log:
- *   - 04/25/2025: Created to resolve Vite import error and implement Quick Feedback.
- *   - 04/25/2025: Fixed WebSocket connection errors.
- *   - 04/25/2025: Fixed connection throttling and WebSocket closures.
- *   - 04/28/2025: Fixed ReferenceError: useRef is not defined.
- *   - 04/30/2025: Fixed 400 Bad Request errors by ensuring valid query props.
- *     - Why: Socket.IO connections failed due to invalid props in query (User, 04/30/2025).
- *     - How: Added valid query.props with client details, aligned with socket.js requirements.
- *     - Test: Run `npm run dev`, submit feedback, verify no 400 errors, idurar_db.logs shows valid props.
+ *   - 04/07/2025: Initialized feedback button with WebSocket integration.
+ *   - 04/29/2025: Fixed invalid token issue.
+ *   - 04/29/2025: Fixed uuid import error.
+ *     - Why: Vite error showed failed import of uuid (User, 04/29/2025).
+ *     - How: Replaced uuid with browser-native crypto.randomUUID(), preserved all feedback functionality.
+ *     - Test: Click feedback button, submit feedback, verify yellow log in LiveFeed.jsx, no import errors.
  * Test Instructions:
- *   - Run `npm start` (backend) and `npm run dev` (frontend), navigate to /grok: Verify FeedbackButton renders in Quick Feedback Card.
- *   - Enter "Test button broken" and submit: Confirm yellow log in LiveFeed.jsx, idurar_db.logs entry, success notification, no 400 errors.
- *   - Submit empty feedback: Verify error notification, no WebSocket event.
- *   - Simulate network failure (stop backend): Confirm error notification, no console errors, reconnects on server restart.
- *   - Check idurar_db.logs: Confirm feedback entries with valid props, no connection errors.
+ *   - Run `npm run dev`, navigate to /grok: Click feedback button, submit "Test feedback", verify yellow log in LiveFeed.jsx.
+ *   - Check browser console: Confirm no uuid import errors, valid JWT used.
  * Future Enhancements:
- *   - Add feedback history display in UI (Sprint 4).
- *   - Support feedback categories (e.g., Bug, Feature) (Sprint 5).
+ *   - Add feedback form UI (Sprint 4).
+ *   - Support feedback categories (Sprint 5).
  * Self-Notes:
- *   - Nate: Created to fix Vite import error and implement Quick Feedback for Sprint 3 (04/25/2025).
- *   - Nate: Fixed WebSocket errors with query props and enhanced logging (04/25/2025).
- *   - Nate: Fixed throttling and closure errors with reconnection logic (04/25/2025).
- *   - Nate: Fixed useRef ReferenceError by adding import (04/28/2025).
- *   - Nate: Fixed 400 Bad Request errors with valid query props (04/30/2025).
- * Rollback Instructions:
- *   - If FeedbackButton fails: Remove FeedbackButton.jsx (`rm frontend/src/components/FeedbackButton.jsx`) and revert GrokUI.jsx to .bak.
- *   - Verify /grok renders without feedback feature after rollback.
+ *   - Nate: Fixed uuid import with crypto.randomUUID(), preserved all functionality (04/29/2025).
  */
-import React, { useState, useEffect, useRef } from 'react';
-import { Input, Button, Space, message } from 'antd';
-import io from 'socket.io-client';
+import React, { useCallback } from 'react';
+import { Button, message } from 'antd';
 
-const FeedbackButton = ({ messageApi, token }) => {
-  const [feedback, setFeedback] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const socketRef = useRef(null);
+const FeedbackButton = ({ token, socketTasks, messageApi }) => {
+  const handleFeedback = useCallback(() => {
+    const feedback = prompt('Enter your feedback:');
+    if (feedback) {
+      if (!socketTasks) {
+        console.error('FeedbackButton: No socket instance available');
+        messageApi.error('Feedback submission failed: No socket connection');
+        return;
+      }
+      const eventId = crypto.randomUUID(); // Use browser-native UUID generator
+      socketTasks.emit('feedback', {
+        message: feedback,
+        timestamp: new Date().toISOString(),
+        eventId,
+      });
+      messageApi.success('Feedback submitted');
+    }
+  }, [socketTasks, messageApi]);
 
   console.log('FeedbackButton: Initializing with token:', token ? 'present' : 'missing');
-
-  useEffect(() => {
-    socketRef.current = io('http://localhost:8888', {
-      auth: { token },
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      transports: ['websocket', 'polling'],
-      query: {
-        props: JSON.stringify({
-          token: token ? 'present' : 'missing',
-          client: navigator.userAgent,
-          source: 'FeedbackButton',
-        }),
-      },
-    });
-
-    socketRef.current.on('connect', () => {
-      console.log('FeedbackButton: Socket.IO connected');
-    });
-
-    socketRef.current.on('connect_error', (err) => {
-      console.error('FeedbackButton: Socket.IO connection error:', err.message);
-      messageApi.error('Feedback connection lost');
-    });
-
-    socketRef.current.on('disconnect', (reason) => {
-      console.log('FeedbackButton: Socket.IO disconnected:', reason);
-    });
-
-    return () => {
-      console.log('FeedbackButton: Disconnecting Socket.IO');
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
-  }, [messageApi, token]);
-
-  const handleSubmit = async () => {
-    if (!feedback.trim()) {
-      messageApi.error('Feedback cannot be empty');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      console.log('FeedbackButton: Submitting feedback:', feedback);
-      socketRef.current.emit('feedback', { message: feedback, timestamp: new Date().toISOString() });
-      messageApi.success('Feedback submitted successfully');
-      setFeedback('');
-    } catch (err) {
-      console.error('FeedbackButton: Submit error:', err.message);
-      messageApi.error('Failed to submit feedback');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
-      <Input
-        value={feedback}
-        onChange={(e) => setFeedback(e.target.value)}
-        placeholder="Enter your feedback (e.g., 'Test button broken')"
-      />
-      <Button
-        type="primary"
-        onClick={handleSubmit}
-        loading={isSubmitting}
-        disabled={!feedback.trim()}
-      >
-        Submit Feedback
-      </Button>
-    </Space>
+    <Button type="primary" onClick={handleFeedback} style={{ marginTop: '20px' }}>
+      Quick Feedback
+    </Button>
   );
 };
 

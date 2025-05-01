@@ -1,297 +1,158 @@
 /*
  * File Path: frontend/src/hooks/useLiveFeed.js
- * Purpose: Custom hook for managing live feed state and Socket.IO events in Allur Space Console.
+ * Purpose: Manages WebSocket events for real-time updates in Allur Space Console, providing task and proposal events to LiveFeed.jsx.
  * How It Works:
- *   - Listens to Socket.IO events (taskUpdate, fileUpdate, backendProposal, priorityUpdate, feedback, socket_test) for real-time updates.
- *   - Maintains live feed state, capped at 50 entries, with color-coded logs.
- *   - Supports debounced search and JSON export for debugging.
- * Mechanics:
- *   - Uses socket.io-client for real-time updates, validates taskId/proposalId.
- *   - Queues events during disconnects, flushes on reconnect with exponential backoff.
- *   - Includes auth token and props for socket.js handshake validation.
+ *   - Establishes a Socket.IO connection to receive taskUpdate, backendProposal, and feedback events.
+ *   - Uses socketRegistry.js to prevent redundant connections.
+ *   - Deduplicates events using eventId and debounces processing to avoid duplicate UI updates.
  * Dependencies:
- *   - React: useState, useEffect, useRef for state and lifecycle (version 18.3.1).
- *   - socket.io-client: Real-time updates (version 4.8.1).
- *   - antd: App, message for notifications (version 5.24.6).
- *   - moment: Timestamp formatting.
- *   - lodash: Debounced search (version ^4.17.21).
+ *   - React: useState, useEffect, useRef (version 18.3.1).
+ *   - socket.io-client: WebSocket client (version 4.8.1).
+ *   - socketRegistry.js: Tracks socket instances.
+ *   - logClientError.js: Client-side error logging.
+ *   - lodash/debounce: Debounces event processing (version 4.17.21).
  * Dependents:
- *   - GrokUI.jsx: Renders LiveFeed.jsx with live feed state.
- *   - LiveFeed.jsx: Displays feed entries.
+ *   - LiveFeed.jsx: Consumes events for rendering.
+ *   - GrokUI.jsx: Uses hook indirectly via LiveFeed.jsx.
  * Why It’s Here:
- *   - Provides real-time feedback for Sprint 2 task and proposal actions (04/07/2025).
+ *   - Enables real-time event handling for Sprint 2 (04/07/2025).
  * Change Log:
- *   - 04/07/2025: Initialized with taskUpdate, fileUpdate, backendProposal events.
- *   - 04/23/2025: Added priorityUpdate, debounced search, JSON export.
- *   - 04/23/2025: Enhanced Socket.IO stability with reconnect handling.
- *   - 04/23/2025: Added stagedFiles persistence debug logs.
- *   - 04/23/2025: Fixed lodash.debounce import error.
- *   - 04/24/2025: Replaced static message with messageApi, wrapped in App, added JWT token.
- *     - Why: Warning: [antd: message] Static function can not consume context, WebSocket failures (User, 04/24/2025).
- *     - How: Used messageApi from props, added App.useApp, included auth: { token } in Socket.IO.
- *   - 05/03/2025: Fixed WebSocket connection failure.
- *     - Why: Failed to connect due to missing props and invalid token (User, 05/03/2025).
- *     - How: Added props (token, setSocketError), queued events on missing token, enhanced handshake error logging, added socket_test handler.
- *     - Test: Run `npm run dev`, navigate to /grok, verify console logs socket_test event, LiveFeed shows taskUpdate and feedback events.
+ *   - 04/07/2025: Initialized WebSocket hook for live feed.
+ *   - 04/23/2025: Added event deduplication with eventId.
+ *   - 04/29/2025: Fixed socketLiveFeed not iterable error.
+ *   - 04/30/2025: Added debounce to fix duplicate taskUpdate events (Grok).
+ *   - 04/30/2025: Fixed Vite import error for lodash.debounce (Grok).
+ *   - 05/01/2025: Enhanced deduplication with stricter eventHash, added cleanup (Grok).
+ *   - 05/01/2025: Increased debounce to 600ms, added detailed localStorage logging (Grok).
+ *     - Why: Persistent duplicate taskUpdate events in LiveFeed.jsx (User, 05/01/2025).
+ *     - How: Increased debounce, logged detailed event data to localStorage.
+ *     - Test: POST /api/grok/edit, verify single green/yellow/red log in LiveFeed.jsx, no duplicate logs.
  * Test Instructions:
- *   - Run `npm run dev`, navigate to http://localhost:3000/grok: Verify LiveFeed.jsx shows taskUpdate, fileUpdate, backendProposal, feedback events, capped at 50 entries.
- *   - Submit “Build CRM system”: Confirm blue/yellow logs with stagedFiles details in LiveFeed.
- *   - Stop/restart server: Verify LiveFeed resumes updates, events queued, console logs reconnect attempts.
- *   - Search LiveFeed: Confirm debounced search filters entries.
- *   - Export JSON: Verify feed entries exported with stagedFiles details.
- *   - Check console: Verify no WebSocket errors, socket_test event received.
- * Future Enhancements:
- *   - Add feed filtering by event type (Sprint 4).
- *   - Support persistent feed storage (Sprint 5).
- * Self-Notes:
- *   - Nate: Fixed message warning and WebSocket issues with messageApi and token auth (04/24/2025).
- *   - Nate: Fixed WebSocket connection with props and token validation (05/03/2025).
+ *   - Run `npm run dev`, navigate to /grok: Submit "Build CRM system", verify single green/yellow/red log in LiveFeed.jsx, no console errors.
+ *   - Submit "Add MFA to login": Confirm single yellow backendProposal log.
+ *   - Restart server: Verify events resume on reconnect, no duplicate logs.
+ *   - Check browser console and localStorage ('clientErrors') for no duplicate event logs.
  * Rollback Instructions:
- *   - If LiveFeed fails: Copy useLiveFeed.js.bak to useLiveFeed.js (`copy frontend\src\hooks\useLiveFeed.js.bak frontend\src\hooks\useLiveFeed.js`).
- *   - Verify LiveFeed.jsx updates after rollback.
+ *   - Revert to useLiveFeed.js.bak (`mv frontend/src/hooks/useLiveFeed.js.bak frontend/src/hooks/useLiveFeed.js`).
+ *   - Verify /grok loads, LiveFeed.jsx renders without duplicates.
+ * Future Enhancements:
+ *   - Add event filtering (Sprint 4).
+ *   - Support event persistence (Sprint 5).
  */
+
 import { useState, useEffect, useRef } from 'react';
-import { App } from 'antd';
 import io from 'socket.io-client';
-import moment from 'moment';
+import socketRegistry from '../utils/socketRegistry';
+import { logClientError } from '../utils/logClientError';
+import { BASE_URL } from '../config/serverApiConfig';
 import debounce from 'lodash/debounce';
 
-const isValidTaskId = (taskId) => {
-  const isValid = typeof taskId === 'string' && taskId.length === 36 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(taskId);
-  if (!isValid) console.warn(`useLiveFeed: Invalid taskId: ${taskId || 'missing'}`);
-  return isValid;
-};
-
-const isValidProposalId = (proposalId) => {
-  const isValid = typeof proposalId === 'string' && proposalId.length > 0;
-  if (!isValid) console.warn(`useLiveFeed: Invalid proposalId: ${proposalId || 'missing'}`);
-  return isValid;
-};
-
-const useLiveFeed = ({ messageApi, token }) => {
-  const { message } = App.useApp();
-  console.log('useLiveFeed: Initializing hook with token:', token ? 'present' : 'missing');
-  const [liveFeed, setLiveFeed] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [socketError, setSocketError] = useState(null);
+const useLiveFeed = () => {
+  const [events, setEvents] = useState([]);
   const socketRef = useRef(null);
-  const eventQueue = useRef([]);
-  const reconnectAttemptsRef = useRef(0);
-  const maxReconnectAttempts = 5;
+  const seenEvents = useRef(new Set());
+  const eventHashes = useRef(new Set());
 
-  const debouncedSearch = debounce((term) => {
-    console.log('useLiveFeed: Debounced search with term:', term);
-    setSearchTerm(term);
-  }, 300);
+  // Cleanup old events to prevent memory growth
+  const cleanupEvents = () => {
+    const maxEvents = 1000; // Retain only the last 1000 events
+    if (seenEvents.current.size > maxEvents) {
+      const oldEvents = Array.from(seenEvents.current).slice(0, seenEvents.current.size - maxEvents);
+      oldEvents.forEach(eventId => seenEvents.current.delete(eventId));
+    }
+    if (eventHashes.current.size > maxEvents) {
+      const oldHashes = Array.from(eventHashes.current).slice(0, eventHashes.current.size - maxEvents);
+      oldHashes.forEach(hash => eventHashes.current.delete(hash));
+    }
+  };
+
+  const handleEvent = debounce((type, data) => {
+    const eventId = data.eventId || `${type}_${Date.now()}_${Math.random()}`;
+    const eventHash = `${type}_${data.taskId || 'unknown'}_${data.status || 'unknown'}_${data.error || ''}_${data.timestamp || ''}_${data.message || ''}`;
+    
+    if (seenEvents.current.has(eventId) || eventHashes.current.has(eventHash)) {
+      console.log('useLiveFeed: Skipped duplicate event', { type, eventId, eventHash, data });
+      const errorData = {
+        message: `Skipped duplicate event: ${type}`,
+        context: 'LiveFeed',
+        details: { eventId, eventHash, type, data, timestamp: new Date().toISOString() },
+      };
+      logClientError(errorData);
+      // Log to localStorage for debugging
+      try {
+        const storedErrors = JSON.parse(localStorage.getItem('clientErrors') || '[]');
+        storedErrors.push(errorData);
+        localStorage.setItem('clientErrors', JSON.stringify(storedErrors.slice(-100)));
+      } catch (err) {
+        console.error('useLiveFeed: Failed to store duplicate event in localStorage:', err.message);
+      }
+      return;
+    }
+    
+    seenEvents.current.add(eventId);
+    eventHashes.current.add(eventHash);
+    setEvents((prev) => [...prev, { type, data, eventId, timestamp: new Date().toISOString() }]);
+    cleanupEvents();
+  }, 600);
 
   useEffect(() => {
-    console.log('useLiveFeed: Setting up Socket.IO');
-    socketRef.current = io('http://localhost:8888', {
-      auth: { token: token || 'fallback-token' }, // Fallback for testing
+    const auth = JSON.parse(localStorage.getItem('auth') || '{}');
+    const token = auth.token || null;
+    if (!token) {
+      logClientError({
+        message: 'Missing auth token for live feed',
+        context: 'useLiveFeed',
+        details: { timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+
+    const socketId = Symbol('useLiveFeed');
+    if (socketRegistry.has(socketId)) {
+      console.log('useLiveFeed: Socket already registered');
+      return;
+    }
+    socketRegistry.add(socketId);
+    console.log('useLiveFeed: Socket registered, registry size:', socketRegistry.size);
+
+    socketRef.current = io(BASE_URL, {
+      auth: { token },
       query: {
         props: JSON.stringify({
-          token: token || 'fallback-token',
-          setSocketError: 'function',
+          token,
+          client: navigator.userAgent,
+          source: 'useLiveFeed',
         }),
       },
+      transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: maxReconnectAttempts,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 16000,
-      randomizationFactor: 0.5,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 5000,
+      reconnectionDelayMax: 32000,
     });
 
-    socketRef.current.on('connect', () => {
-      console.log('useLiveFeed: Socket.IO connected');
-      reconnectAttemptsRef.current = 0;
-      setSocketError(null);
-      messageApi.success('Live feed connected');
-      // Flush queued events
-      eventQueue.current.forEach(event => setLiveFeed(prev => [...prev, event].slice(-50)));
-      eventQueue.current = [];
-    });
+    socketRef.current.on('taskUpdate', (data) => handleEvent('taskUpdate', data));
+    socketRef.current.on('backendProposal', (data) => handleEvent('backendProposal', data));
+    socketRef.current.on('feedback', (data) => handleEvent('feedback', data));
 
     socketRef.current.on('connect_error', (err) => {
-      reconnectAttemptsRef.current += 1;
-      const errorMsg = `useLiveFeed: Socket.IO connection error: ${err.message} (Attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`;
-      console.error(errorMsg);
-      setSocketError(errorMsg);
-      messageApi.error(reconnectAttemptsRef.current < maxReconnectAttempts ? 'Live feed connection lost. Retrying...' : 'Live feed connection failed.');
-    });
-
-    socketRef.current.on('socket_test', (data) => {
-      console.log('useLiveFeed: Socket.IO test event:', data);
-      addEvent({ message: data.message, color: 'default', timestamp: data.timestamp });
-    });
-
-    socketRef.current.on('taskUpdate', (data) => {
-      console.log('useLiveFeed: taskUpdate received:', data.taskId, 'stagedFiles:', data.stagedFiles);
-      if (!isValidTaskId(data.taskId)) {
-        addEvent({
-          message: `${moment().format('MMMM Do YYYY, h:mm:ss a')} - Invalid task update received`,
-          color: 'red',
-          details: `Task ID: ${data.taskId || 'missing'}`,
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-      if (!socketRef.current.connected || !token) {
-        console.log('useLiveFeed: Queuing taskUpdate due to disconnect or missing token');
-        eventQueue.current.push(data);
-        return;
-      }
-      addEvent({
-        message: `${moment().format('MMMM Do YYYY, h:mm:ss a')} - Task ${data.taskId} updated`,
-        color: data.logColor || 'default',
-        details: JSON.stringify({
-          taskId: data.taskId,
-          status: data.status,
-          files: data.stagedFiles?.map(f => f.path.split(/[\\/]/).pop()) || [],
-          stagedFilesCount: data.stagedFiles?.length || 0,
-          error: data.error || null,
-        }, null, 2),
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    socketRef.current.on('fileUpdate', ({ taskId, file }) => {
-      console.log('useLiveFeed: fileUpdate received:', taskId, file);
-      if (!isValidTaskId(taskId)) {
-        addEvent({
-          message: `${moment().format('MMMM Do YYYY, h:mm:ss a')} - Invalid file update received`,
-          color: 'red',
-          details: `Task ID: ${taskId || 'missing'}`,
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-      if (!socketRef.current.connected || !token) {
-        console.log('useLiveFeed: Queuing fileUpdate due to disconnect or missing token');
-        eventQueue.current.push({ taskId, file });
-        return;
-      }
-      addEvent({
-        message: `${moment().format('MMMM Do YYYY, h:mm:ss a')} - File updated for task ${taskId}`,
-        color: 'default',
-        details: `File: ${file.split(/[\\/]/).pop()}`,
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    socketRef.current.on('backendProposal', ({ taskId, proposals }) => {
-      console.log('useLiveFeed: backendProposal received:', taskId, proposals.length);
-      if (!isValidTaskId(taskId)) {
-        addEvent({
-          message: `${moment().format('MMMM Do YYYY, h:mm:ss a')} - Invalid backend proposal received`,
-          color: 'red',
-          details: `Task ID: ${taskId || 'missing'}`,
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-      if (!socketRef.current.connected || !token) {
-        console.log('useLiveFeed: Queuing backendProposal due to disconnect or missing token');
-        eventQueue.current.push({ taskId, proposals });
-        return;
-      }
-      addEvent({
-        message: `${moment().format('MMMM Do YYYY, h:mm:ss a')} - New backend proposals for task ${taskId}`,
-        color: 'yellow',
-        details: `Proposals: ${proposals.map(p => p._id).join(', ')}`,
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    socketRef.current.on('priorityUpdate', ({ taskId, priority }) => {
-      console.log('useLiveFeed: priorityUpdate received:', taskId, priority);
-      if (!isValidTaskId(taskId)) {
-        addEvent({
-          message: `${moment().format('MMMM Do YYYY, h:mm:ss a')} - Invalid priority update received`,
-          color: 'red',
-          details: `Task ID: ${taskId || 'missing'}`,
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-      if (!socketRef.current.connected || !token) {
-        console.log('useLiveFeed: Queuing priorityUpdate due to disconnect or missing token');
-        eventQueue.current.push({ taskId, priority });
-        return;
-      }
-      addEvent({
-        message: `${moment().format('MMMM Do YYYY, h:mm:ss a')} - Priority updated for task ${taskId}`,
-        color: 'default',
-        details: `Priority: ${priority}`,
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    socketRef.current.on('feedback', (data) => {
-      console.log('useLiveFeed: feedback received:', data.message);
-      if (!socketRef.current.connected || !token) {
-        console.log('useLiveFeed: Queuing feedback due to disconnect or missing token');
-        eventQueue.current.push(data);
-        return;
-      }
-      addEvent({
-        message: `${moment().format('MMMM Do YYYY, h:mm:ss a')} - ${data.message}`,
-        color: data.color || 'yellow',
-        details: data.details || 'User feedback',
-        timestamp: data.timestamp,
+      logClientError({
+        message: `Socket.IO connect error: ${err.message}`,
+        context: 'useLiveFeed',
+        details: { stack: err.stack, timestamp: new Date().toISOString() },
       });
     });
 
     return () => {
-      console.log('useLiveFeed: Disconnecting Socket.IO');
-      socketRef.current.disconnect();
+      socketRef.current?.disconnect();
+      socketRegistry.delete(socketId);
+      console.log('useLiveFeed: Socket unregistered, registry size:', socketRegistry.size);
     };
-  }, [messageApi, token]);
-
-  const addEvent = (event) => {
-    setLiveFeed((prev) => {
-      const newFeed = [...prev, event].slice(-50);
-      const filtered = filterFeed(newFeed, searchTerm);
-      setLiveFeed(newFeed);
-      setFilteredFeed(filtered);
-      return newFeed;
-    });
-  };
-
-  const filterFeed = (feed, query) => {
-    if (!query) return feed;
-    return feed.filter(
-      (item) =>
-        item.message.toLowerCase().includes(query.toLowerCase()) ||
-        (item.details && item.details.toLowerCase().includes(query.toLowerCase()))
-    );
-  };
-
-  const setFilteredFeed = (feed) => {
-    setLiveFeed(feed);
-  };
-
-  const exportFeed = () => {
-    console.log('useLiveFeed: Exporting feed to JSON');
-    const json = JSON.stringify(liveFeed, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `live-feed-${moment().format('YYYY-MM-DD-HH-mm-ss')}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    messageApi.success('Live feed exported to JSON');
-  };
+  }, []);
 
   return {
-    liveFeed,
-    filteredFeed: filterFeed(liveFeed, searchTerm),
-    searchTerm,
-    setSearchTerm: debouncedSearch,
-    exportFeed,
-    setLiveFeed,
-    socketError,
-    setSocketError,
+    events,
+    socketLiveFeed: socketRef.current ? [socketRef.current] : [],
   };
 };
 

@@ -1,20 +1,44 @@
 /*
- * File Path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\utils\fileUtils.js
- * Purpose: Utility functions for file operations, log management, and site structure in Grok Programming Machine.
- * Dependencies: fs (node:fs/promises), path, winston (logging), zlib (compression), readline (streaming), child_process (npm)
- * Notes:
- *   - Manages logs, maintains dynamic site structure, handles dependencies.
- * Updates:
- *   - 04/08/2025: Integrated site structure logs, deduped bloat (Previous).
- *   - 04/08/2025: Added installDependency, site structure generation (Current).
- *     - Why: Circular dependency broke installDependency; need live site-structure.json (User feedback).
- *     - How: Moved installDependency here, added updateSiteStructure.
- *     - Impact: Resolves export errors, enables full system awareness.
- *     - Test: Submit tasks, check site-structure.json updates, deps install.
- * Self-Notes:
- *   - Nate: Test site structure updates with file adds/deletes—watch fs events?
- * Future Direction:
- *   - Log categorization (Hour 6).
+ * File Path: backend/src/utils/fileUtils.js
+ * Purpose: Utility functions for file operations, log management, and site structure in Allur Space Console.
+ * How It Works:
+ *   - Manages file reading, log appending, and site structure generation for system analysis and maintenance.
+ *   - Installs dependencies via npm, updates site-structure.json, and handles log deduplication and pruning.
+ *   - Logs operations to grok.log (filesystem) and idurar_db.logs (MongoDB) for traceability.
+ * Mechanics:
+ *   - Recursively scans directories for files and logs, excluding node_modules.
+ *   - Uses zlib for log compression, readline for streaming, and child_process for npm installs.
+ *   - Maintains multiple log files (ERROR_LOG.md, FEATURE_LOG.md, etc.) and site-structure.json.
+ * Dependencies:
+ *   - fs.promises: File operations (Node.js built-in).
+ *   - path: Path manipulation (Node.js built-in).
+ *   - winston: Logging to grok.log (version 3.17.0).
+ *   - zlib: Log compression (Node.js built-in).
+ *   - readline: Log streaming (Node.js built-in).
+ *   - child_process: npm installs (Node.js built-in).
+ *   - logUtils.js: MongoDB logging.
+ * Dependents:
+ *   - systemAnalyzer.js: Uses readSystemFiles, appendLog, siteStructureLogs, errorLogPath.
+ *   - taskTesterV18.js, testUtils.js, selfEnhancer.js, testGenerator.js, testExecutionUtils.js: Use appendLog, errorLogPath.
+ * Why It's Here:
+ *   - Supports system analysis, maintenance, and dependency management for Sprint 2 (User, 04/30/2025).
+ * Change Log:
+ *   - 04/08/2025: Integrated site structure logs, added dedupeLog (Nate).
+ *   - 04/08/2025: Added installDependency, updateSiteStructure (Nate).
+ *   - 04/30/2025: Aligned with provided version, added MongoDB logging (Grok).
+ *     - Why: Enhance system awareness with site-structure.json, ensure traceability (User, 04/30/2025).
+ *     - How: Incorporated provided functions, added logUtils.js for MongoDB logging.
+ * Test Instructions:
+ *   - Run `npm start`, GET /grok/analyze: Verify grok.log contains dependency graph, site-structure.json updates.
+ *   - GET /grok/maintenance: Confirm ERROR_LOG.md, grok.log pruned, no permission errors.
+ *   - POST /api/grok/edit with "Build CRM system": Verify site-structure.json reflects new files, idurar_db.logs shows file operations.
+ *   - Check idurar_db.logs: Confirm file operation logs, no errors.
+ * Rollback Instructions:
+ *   - Revert to fileUtils.js.bak (`mv backend/src/utils/fileUtils.js.bak backend/src/utils/fileUtils.js`).
+ *   - Verify /grok/analyze works post-rollback.
+ * Future Enhancements:
+ *   - Cache site structure for performance (Sprint 5).
+ *   - Support multi-project log directories (Sprint 6).
  */
 
 const fs = require('fs').promises;
@@ -24,14 +48,15 @@ const zlib = require('zlib');
 const { createReadStream } = require('fs');
 const readline = require('readline');
 const { execSync } = require('child_process');
+const { logInfo, logWarn, logError } = require('./logUtils');
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
-    new winston.transports.File({ filename: 'grok.log', maxsize: 1024 * 1024 }),
-    new winston.transports.Console()
-  ]
+    new winston.transports.File({ filename: path.join(__dirname, '../../../grok.log'), maxsize: 1024 * 1024 }),
+    new winston.transports.Console(),
+  ],
 });
 
 const logDir = path.resolve(__dirname, '../../../');
@@ -44,19 +69,24 @@ const siteStructurePath = path.join(logDir, 'site-structure.json');
 
 /**
  * Installs a dependency via npm if not present.
+ * @param {string} dependency - The dependency to install.
+ * @returns {Promise<boolean>} True if installed, false if already present or failed.
  */
 async function installDependency(dependency) {
   try {
     require.resolve(dependency);
-    logger.debug(`${dependency} already installed`);
+    await logInfo(`${dependency} already installed`, 'fileUtils', { timestamp: new Date().toISOString() });
     return false;
   } catch (err) {
     try {
       execSync(`npm install ${dependency} --save`, { stdio: 'inherit', cwd: logDir });
-      logger.info(`Installed dependency: ${dependency}`);
+      await logInfo(`Installed dependency: ${dependency}`, 'fileUtils', { timestamp: new Date().toISOString() });
       return true;
     } catch (installErr) {
-      logger.error(`Failed to install ${dependency}: ${installErr.message}`);
+      await logError(`Failed to install ${dependency}: ${installErr.message}`, 'fileUtils', {
+        stack: installErr.stack,
+        timestamp: new Date().toISOString(),
+      });
       return false;
     }
   }
@@ -64,6 +94,8 @@ async function installDependency(dependency) {
 
 /**
  * Updates site-structure.json based on current filesystem.
+ * @param {string} rootDir - Root directory to scan (default: logDir).
+ * @returns {Promise<Object>} The generated site structure.
  */
 async function updateSiteStructure(rootDir = logDir) {
   const structure = {};
@@ -84,15 +116,22 @@ async function updateSiteStructure(rootDir = logDir) {
   try {
     await walkDir(rootDir, structure);
     await fs.writeFile(siteStructurePath, JSON.stringify(structure, null, 2), 'utf8');
-    logger.info(`Updated site-structure.json at ${siteStructurePath}`);
+    await logInfo(`Updated site-structure.json`, 'fileUtils', {
+      path: siteStructurePath,
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
-    logger.warn(`Failed to update site-structure.json: ${err.message}`);
+    await logWarn(`Failed to update site-structure.json: ${err.message}`, 'fileUtils', {
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
   }
   return structure;
 }
 
 /**
  * Reads site structure to find all log files.
+ * @returns {Promise<string[]>} Array of log file paths.
  */
 async function siteStructureLogs() {
   try {
@@ -109,36 +148,83 @@ async function siteStructureLogs() {
       }
     };
     walkStructure(structure, logDir);
+    await logInfo(`Found ${logFiles.length} log files`, 'fileUtils', {
+      logFiles,
+      timestamp: new Date().toISOString(),
+    });
     return logFiles;
   } catch (err) {
-    logger.warn(`Failed to read site-structure.json: ${err.message}`);
+    await logWarn(`Failed to read site-structure.json: ${err.message}`, 'fileUtils', {
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
     return [errorLogPath, featureLogPath, debugLogPath, connectivityLogPath, overviewLogPath, path.join(logDir, 'grok.log')];
   }
 }
 
+/**
+ * Reads the last 1MB of a log file.
+ * @param {string} filePath - Path to the log file.
+ * @returns {Promise<string>} Log content.
+ */
 async function readLog(filePath) {
   try {
     const content = await fs.readFile(filePath, 'utf8');
+    await logInfo(`Read log file`, 'fileUtils', {
+      filePath,
+      size: content.length,
+      timestamp: new Date().toISOString(),
+    });
     return content.slice(-1024 * 1024);
   } catch (err) {
+    await logWarn(`Failed to read log: ${err.message}`, 'fileUtils', {
+      filePath,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
     return '# Log Not Found\nNo previous entries.';
   }
 }
 
+/**
+ * Appends a log entry to the specified file with timestamp.
+ * @param {string} filePath - Path to the log file.
+ * @param {string} entry - Log entry to append.
+ * @returns {Promise<void>}
+ */
 async function appendLog(filePath, entry) {
   const timestamp = new Date().toISOString();
   const formattedEntry = `\n\n## Entry - ${timestamp}\n${entry}`;
-  await fs.appendFile(filePath, formattedEntry);
-  await pruneLog(filePath);
+  try {
+    await fs.appendFile(filePath, formattedEntry);
+    await pruneLog(filePath);
+    await logInfo(`Appended log entry`, 'fileUtils', {
+      filePath,
+      contentLength: formattedEntry.length,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    await logError(`Failed to append log: ${err.message}`, 'fileUtils', {
+      filePath,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
+    throw err;
+  }
 }
 
+/**
+ * Deduplicates log entries based on content, preserving errors and task IDs.
+ * @param {string} filePath - Path to the log file.
+ * @returns {Promise<void>}
+ */
 async function dedupeLog(filePath) {
   try {
     const lines = [];
     const seen = new Set();
     const rl = readline.createInterface({
       input: createReadStream(filePath),
-      crlfDelay: Infinity
+      crlfDelay: Infinity,
     });
 
     for await (const line of rl) {
@@ -151,13 +237,28 @@ async function dedupeLog(filePath) {
 
     if (lines.length !== seen.size) {
       await fs.writeFile(filePath, lines.join('\n'));
-      logger.info(`Deduped ${filePath}: reduced from ${seen.size} to ${lines.length} lines`);
+      await logInfo(`Deduped log file`, 'fileUtils', {
+        filePath,
+        reducedFrom: seen.size,
+        reducedTo: lines.length,
+        timestamp: new Date().toISOString(),
+      });
     }
   } catch (err) {
-    logger.warn(`Failed to dedupe ${filePath}: ${err.message}`);
+    await logWarn(`Failed to dedupe log: ${err.message}`, 'fileUtils', {
+      filePath,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 
+/**
+ * Prunes log file to keep last 1000 lines, archiving excess to .gz.
+ * @param {string} filePath - Path to the log file.
+ * @param {number} maxLines - Maximum lines to keep (default: 1000).
+ * @returns {Promise<void>}
+ */
 async function pruneLog(filePath, maxLines = 1000) {
   try {
     const stats = await fs.stat(filePath);
@@ -167,51 +268,77 @@ async function pruneLog(filePath, maxLines = 1000) {
     const lines = [];
     const rl = readline.createInterface({
       input: createReadStream(filePath),
-      crlfDelay: Infinity
+      crlfDelay: Infinity,
     });
 
     for await (const line of rl) lines.push(line);
     if (lines.length <= maxLines) return;
 
-    const criticalEntries = lines.filter(line => 
-      line.includes('#') || line.includes('Error') || line.includes('Task ID')
-    ).slice(-maxLines / 2);
+    const criticalEntries = lines
+      .filter(line => line.includes('#') || line.includes('Error') || line.includes('Task ID'))
+      .slice(-maxLines / 2);
     const recentEntries = lines.slice(-maxLines / 2);
     const prunedContent = [...new Set([...criticalEntries, ...recentEntries])].join('\n');
-    
+
     const archivePath = `${filePath}.${Date.now()}.gz`;
     const compressed = zlib.gzipSync(await fs.readFile(filePath));
     await fs.writeFile(archivePath, compressed);
     await fs.writeFile(filePath, prunedContent);
-    logger.info(`Pruned ${filePath}: kept ${maxLines} lines, archived to ${archivePath}`);
+    await logInfo(`Pruned log file`, 'fileUtils', {
+      filePath,
+      keptLines: maxLines,
+      archivedTo: archivePath,
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
-    logger.warn(`Failed to prune ${filePath}: ${err.message}`);
+    await logWarn(`Failed to prune log: ${err.message}`, 'fileUtils', {
+      filePath,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 
+/**
+ * Maintains all log files by pruning and archiving.
+ * @returns {Promise<Object>} Report of maintained logs and archives.
+ */
 async function maintainLogFiles() {
   const report = { logs: [], archives: [] };
   const logFiles = await siteStructureLogs();
-  
+
   for (const filePath of logFiles) {
     try {
       await pruneLog(filePath);
       report.logs.push(filePath);
       const stats = await fs.stat(filePath).catch(() => ({ size: 0 }));
       if (stats.size > 0) report.archives.push(`${filePath}.gz`);
+      await logInfo(`Maintained log file`, 'fileUtils', {
+        filePath,
+        timestamp: new Date().toISOString(),
+      });
     } catch (err) {
-      logger.warn(`Failed to maintain ${filePath}: ${err.message}`);
+      await logWarn(`Failed to maintain log: ${err.message}`, 'fileUtils', {
+        filePath,
+        stack: err.stack,
+        timestamp: new Date().toISOString(),
+      });
     }
   }
   return report;
 }
 
+/**
+ * Parses log file for insights (errors, tasks, features).
+ * @param {string} filePath - Path to the log file.
+ * @returns {Promise<Object>} Insights with errors, tasks, and features.
+ */
 async function streamLogParse(filePath) {
   const insights = { errors: [], tasks: [], features: [] };
   try {
     const rl = readline.createInterface({
       input: createReadStream(filePath),
-      crlfDelay: Infinity
+      crlfDelay: Infinity,
     });
 
     for await (const line of rl) {
@@ -219,14 +346,30 @@ async function streamLogParse(filePath) {
       if (line.includes('Task ID')) insights.tasks.push(line);
       if (line.includes('# Feature') || line.includes('Self-Enhancement')) insights.features.push(line);
     }
+    await logInfo(`Parsed log for insights`, 'fileUtils', {
+      filePath,
+      errorCount: insights.errors.length,
+      taskCount: insights.tasks.length,
+      featureCount: insights.features.length,
+      timestamp: new Date().toISOString(),
+    });
     return insights;
   } catch (err) {
-    logger.warn(`Failed to parse ${filePath}: ${err.message}`);
+    await logWarn(`Failed to parse log: ${err.message}`, 'fileUtils', {
+      filePath,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
     return { errors: [], tasks: [], features: [] };
   }
 }
 
-async function readSystemFiles(dir = 'C:/Users/nthorpe/Desktop/crm/idurar-erp-crm') {
+/**
+ * Reads system files (.js, .jsx, .css, .md, .json) from project directory.
+ * @param {string} dir - Directory to scan (default: project root).
+ * @returns {Promise<Object>} Map of file paths to contents.
+ */
+async function readSystemFiles(dir = path.join(__dirname, '../../../')) {
   const fileContents = {};
   const walkDir = async (currentDir) => {
     try {
@@ -238,12 +381,27 @@ async function readSystemFiles(dir = 'C:/Users/nthorpe/Desktop/crm/idurar-erp-cr
         } else if (fullPath.match(/\.(js|jsx|css|md|json)$/)) {
           try {
             fileContents[fullPath] = await fs.readFile(fullPath, 'utf8');
+            await logInfo(`Read system file`, 'fileUtils', {
+              filePath: fullPath,
+              size: fileContents[fullPath].length,
+              timestamp: new Date().toISOString(),
+            });
           } catch (err) {
+            await logError(`Failed to read file: ${err.message}`, 'fileUtils', {
+              filePath: fullPath,
+              stack: err.stack,
+              timestamp: new Date().toISOString(),
+            });
             await appendLog(errorLogPath, `# File Read Error\nPath: ${fullPath}\nDescription: ${err.message}`);
           }
         }
       }
     } catch (err) {
+      await logError(`Failed to scan directory: ${err.message}`, 'fileUtils', {
+        directory: currentDir,
+        stack: err.stack,
+        timestamp: new Date().toISOString(),
+      });
       await appendLog(errorLogPath, `# Directory Read Error\nDir: ${currentDir}\nDescription: ${err.message}`);
     }
   };
@@ -251,6 +409,11 @@ async function readSystemFiles(dir = 'C:/Users/nthorpe/Desktop/crm/idurar-erp-cr
   return fileContents;
 }
 
+/**
+ * Parses file header for notes (Purpose, Goals, Enhancements, Future).
+ * @param {string} filePath - Path to the file.
+ * @returns {Promise<Object>} Parsed notes.
+ */
 async function readFileNotes(filePath) {
   try {
     const content = await fs.readFile(filePath, 'utf8');
@@ -281,29 +444,37 @@ async function readFileNotes(filePath) {
         else if (currentSection === 'future') notes.future.push(note);
       }
     });
-    logger.debug(`Parsed notes from ${filePath}`);
+    await logInfo(`Parsed file notes`, 'fileUtils', {
+      filePath,
+      purpose: notes.purpose,
+      timestamp: new Date().toISOString(),
+    });
     return notes;
   } catch (err) {
-    logger.warn(`Failed to read notes from ${filePath}: ${err.message}`);
+    await logWarn(`Failed to read file notes: ${err.message}`, 'fileUtils', {
+      filePath,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
     return { purpose: '', goals: [], enhancements: [], future: [] };
   }
 }
 
-module.exports = { 
-  readLog, 
-  appendLog, 
-  readSystemFiles, 
-  readFileNotes, 
-  pruneLog, 
-  maintainLogFiles, 
-  streamLogParse, 
+module.exports = {
+  readLog,
+  appendLog,
+  readSystemFiles,
+  readFileNotes,
+  pruneLog,
+  maintainLogFiles,
+  streamLogParse,
   siteStructureLogs,
   updateSiteStructure,
   installDependency,
   dedupeLog,
-  errorLogPath, 
-  featureLogPath, 
-  debugLogPath, 
-  connectivityLogPath, 
-  overviewLogPath 
+  errorLogPath,
+  featureLogPath,
+  debugLogPath,
+  connectivityLogPath,
+  overviewLogPath,
 };

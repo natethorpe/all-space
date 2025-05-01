@@ -12,30 +12,30 @@
  *   - mongoose: Log model for logging.
  *   - winston: Logging to grok.log (version 3.17.0).
  *   - fileUtils.js: appendLog, errorLogPath.
+ *   - logUtils.js: MongoDB logging.
+ *   - db.js: getModel for model access.
  * Why It’s Here:
  *   - Modularizes test execution from testGenerator.js for Sprint 2 maintainability (05/XX/2025).
  * Change Log:
- *   - 05/XX/2025: Created to extract test execution logic from testGenerator.js.
- *     - Why: Improve modularity and reduce testGenerator.js complexity (User, 05/XX/2025).
- *     - How: Moved runTests logic from testGenerator.js, added validation and logging.
- *     - Test: Run POST /grok/test with { taskId, manual: true }, verify browser opens, blue log in LiveFeed.jsx.
+ *   - 05/XX/2025: Created to extract test execution logic from testGenerator.js (Nate).
+ *   - 04/30/2025: Aligned with provided version, enhanced logging (Grok).
+ *     - Why: Ensure compatibility, improve traceability (User, 04/30/2025).
+ *     - How: Incorporated provided logic, added MongoDB logging via logUtils.js.
  * Test Instructions:
  *   - Run `npm start`, POST /grok/edit with "Build CRM system": Confirm headless test runs, testResults in idurar_db.tasks.
  *   - POST /grok/test with { taskId, manual: true }: Verify browser opens, blue log in LiveFeed.jsx.
  *   - Check idurar_db.logs: Confirm test execution logs, no errors.
+ * Rollback Instructions:
+ *   - Remove testExecutionUtils.js, revert testGenerator.js to include runTests logic.
+ *   - Verify /grok/test works post-rollback.
  * Future Enhancements:
  *   - Add parallel test execution (Sprint 4).
  *   - Support test result aggregation (Sprint 6).
- * Self-Notes:
- *   - Nate: Created to modularize test execution for Sprint 2 (05/XX/2025).
- * Rollback Instructions:
- *   - If tests fail: Remove testExecutionUtils.js, revert testGenerator.js to include runTests logic.
- *   - Verify /grok/test works after rollback.
  */
+
 const winston = require('winston');
 const path = require('path');
-const mongoose = require('mongoose');
-const { executeTests } = require('./taskTesterV18');
+const { runTests } = require('./taskTesterV18');
 const { appendLog, errorLogPath } = require('./fileUtils');
 const { getModel } = require('../db');
 const { logInfo, logError } = require('./logUtils');
@@ -59,8 +59,7 @@ async function runTests(testFile, stagedFiles, taskId, manual = false) {
   }
 
   try {
-    await executeTests(testFile, stagedFiles, taskId, manual);
-    const testResult = { success: true, testedFiles: stagedFiles.length, timestamp: new Date().toISOString() };
+    const testResult = await runTests(testFile, stagedFiles, taskId, manual);
     await logInfo('Tests executed successfully', 'testExecutionUtils', {
       taskId,
       testFile,

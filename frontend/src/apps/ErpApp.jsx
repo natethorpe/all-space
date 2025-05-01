@@ -1,102 +1,87 @@
 /*
  * File Path: frontend/src/apps/ErpApp.jsx
- * Purpose: Renders authenticated routes for IDURAR ERP CRM via AppRouter.jsx with navigation.
+ * Purpose: Main application wrapper for Allur Space Console, providing context, layout, and routing.
  * How It Works:
- *   - Wraps AppRouter.jsx in Ant Design Layout with Sider for navigation.
- *   - Integrates with Redux for auth state and theme settings.
- *   - Delegates routing to AppRouter.jsx, which uses routes.jsx for paths like /grok, /dashboard.
+ *   - Wraps the app in AppContextProvider and ConfigProvider for theme and context.
+ *   - Renders Layout with Header, Sider (navigation), and Content for dashboard and routes.
+ *   - Uses antd App component to enable dynamic theming for message API.
  * Dependencies:
- *   - react: Core library (version 18.3.1).
- *   - antd: Layout, ConfigProvider, Menu for UI and theming (version 5.24.6).
- *   - react-redux: useSelector for auth state (version 9.1.0).
- *   - react-router-dom: useNavigate, useLocation for navigation (version 6.22.0).
- *   - AppRouter.jsx: Defines authenticated routes.
- *   - routes.jsx: Provides route definitions.
- * Dependents:
- *   - IdurarOs.jsx: Renders ErpApp for authenticated users.
+ *   - React: Core library (version 18.3.1).
+ *   - antd: ConfigProvider, App, Layout, Menu for UI and theming (version 5.24.6).
+ *   - AppContextProvider: Application context.
+ *   - AppRouter: Routing component.
  * Why It’s Here:
- *   - Provides authenticated routing and navigation for Sprint 2 (04/07/2025).
+ *   - Serves as the top-level app component for Sprint 2 (04/07/2025).
  * Change Log:
- *   - 04/23/2025: Reconstructed to fix 'React is not defined' error.
- *   - 04/24/2025: Updated to use AppRouter.jsx with routes.jsx.
- *   - 04/24/2025: Added Sider with Menu for navigation.
- *   - 04/24/2025: Fixed Sider import error.
- *     - Why: SyntaxError: antd does not provide export named 'Sider' (User, 04/24/2025).
- *     - How: Changed import to Layout.Sider, retained navigation Menu.
- *     - Test: Run `npm run dev`, login, navigate to /dashboard, verify Sider with Menu, click /grok, confirm GrokUI.jsx renders.
+ *   - 04/07/2025: Initialized app with context and routing.
+ *   - 04/29/2025: Fixed antd message context warning.
+ *   - 04/29/2025: Fixed context consumer errors.
+ *   - 04/29/2025: Restored navigation, header, and dashboard layout.
+ *     - Why: Updates stripped navigation and header, dashboard content failed to load (User, 04/29/2025).
+ *     - How: Reintroduced Layout with Header, Sider, and Content, ensured AppRouter renders dashboard, fixed antd warning, preserved context and theming.
+ *     - Test: Load /grok and /dashboard, verify navigation, header, and content render, no antd warnings.
  * Test Instructions:
- *   - Run `npm run dev`, login, navigate to /dashboard: Verify Sider with Menu, Dashboard.jsx renders, console logs “ErpApp: Rendering AppRouter”.
- *   - Click /grok in Menu: Verify GrokUI.jsx renders, console logs “AppRouter: Rendering routes, authenticated: true”.
- *   - Check browser console: Confirm no Sider import errors, navigation works.
+ *   - Run `npm run dev`, navigate to /grok and /dashboard: Verify navigation bar, header, and content load, no antd message warnings.
+ *   - Submit "Build CRM system": Confirm task appears, error messages display without warnings.
+ *   - Check browser console: Confirm no context or antd-related errors.
  * Future Enhancements:
- *   - Add dynamic theme switching (Sprint 4).
- *   - Support multi-tenant routing (Sprint 6).
+ *   - Add theme customization (Sprint 4).
+ *   - Support internationalization (Sprint 5).
  * Self-Notes:
- *   - Nate: Fixed Sider import to restore login and navigation (04/24/2025).
- * Rollback Instructions:
- *   - If UI fails: Copy ErpApp.jsx.bak to ErpApp.jsx (`copy frontend\src\apps\ErpApp.jsx.bak frontend\src\apps\ErpApp.jsx`).
- *   - Verify /grok and /dashboard render after rollback.
+ *   - Nate: Restored full layout, fixed antd warning, preserved all functionality (04/29/2025).
  */
 import React from 'react';
-import { Layout, ConfigProvider, Menu } from 'antd';
-import { useSelector } from 'react-redux';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { selectAuth } from '@/redux/auth/selectors';
-import AppRouter from '@/router/AppRouter';
+import { ConfigProvider, App, Layout, Menu } from 'antd';
+import AppContextProvider from '../context/appContext';
+import AppRouter from '../router/AppRouter';
+import { useNavigate } from 'react-router-dom';
 
-const { Header, Content, Footer, Sider } = Layout;
+const { Header, Sider, Content } = Layout;
 
 const ErpApp = () => {
-  const { theme } = useSelector(selectAuth);
   const navigate = useNavigate();
-  const location = useLocation();
-  console.log('ErpApp: Rendering AppRouter with theme:', theme, 'Current route:', location.pathname);
 
-  const menuItems = [
-    { key: '/dashboard', label: 'Dashboard' },
-    { key: '/grok', label: 'Console' },
-    { key: '/sponsor/:id', label: 'Sponsor Profile' },
-    { key: '/employee-log', label: 'Employee Log' },
-  ];
-
-  try {
-    return (
-      <ConfigProvider theme={{ token: { colorPrimary: theme?.colorPrimary || '#339393' } }}>
-        <Layout className="erp-layout" style={{ minHeight: '100vh' }}>
-          <Sider width={200} style={{ background: '#001529' }}>
-            <Menu
-              mode="inline"
-              selectedKeys={[location.pathname]}
-              items={menuItems}
-              onClick={({ key }) => navigate(key)}
-              style={{ height: '100%', borderRight: 0, color: '#fff' }}
-              theme="dark"
-            />
-          </Sider>
-          <Layout>
-            <Header style={{ background: '#001529', color: '#fff', display: 'flex', alignItems: 'center' }}>
-              <div className="logo">IDURAR ERP CRM</div>
-            </Header>
-            <Content className="erp-content" style={{ margin: '16px' }}>
-              <AppRouter />
-            </Content>
-            <Footer style={{ textAlign: 'center' }}>
-              IDURAR ERP CRM ©2025 Created by Allur Team
-            </Footer>
+  return (
+    <AppContextProvider>
+      <ConfigProvider
+        theme={{
+          token: {
+            colorPrimary: '#339393',
+            colorLink: '#1640D6',
+            borderRadius: 0,
+          },
+        }}
+      >
+        <App>
+          <Layout style={{ minHeight: '100vh' }}>
+            <Sider collapsible>
+              <Menu
+                theme="dark"
+                mode="inline"
+                defaultSelectedKeys={['dashboard']}
+                items={[
+                  { key: 'dashboard', label: 'Dashboard', link: '/dashboard' },
+                  { key: 'grok', label: 'Grok', link: '/grok' },
+                  { key: 'settings', label: 'Settings', link: '/settings' },
+                  { key: 'sponsor', label: 'Sponsor', link: '/sponsor/:id' },
+                  { key: 'employee-log', label: 'Employee Log', link: '/employee-log' },
+                ]}
+                onClick={({ key }) => navigate(key)}
+              />
+            </Sider>
+            <Layout>
+              <Header style={{ background: '#fff', padding: 0, textAlign: 'center' }}>
+                <h1>Allur Space Console</h1>
+              </Header>
+              <Content style={{ margin: '24px 16px', padding: 24, background: '#fff' }}>
+                <AppRouter />
+              </Content>
+            </Layout>
           </Layout>
-        </Layout>
+        </App>
       </ConfigProvider>
-    );
-  } catch (err) {
-    console.error('ErpApp: Runtime error:', err);
-    return (
-      <div style={{ padding: '20px', color: 'red' }}>
-        <h2>Application Error</h2>
-        <p>{err.message}</p>
-        <button onClick={() => window.location.reload()}>Reload Page</button>
-      </div>
-    );
-  }
+    </AppContextProvider>
+  );
 };
 
 export default ErpApp;

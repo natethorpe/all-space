@@ -7279,3 +7279,32 @@
 {"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:07:26.497Z"}
 {"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:07:26.521Z"}
 {"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:07:26.732Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:05.551Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:05.561Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:05.577Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:05.578Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:05.578Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:05.591Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:14.311Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:14.312Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:15.280Z"}
+{"items":"10","level":"debug","message":"GET /sponsors - Query params:","page":"1","q":"","tier":"","timestamp":"2025-04-29T13:27:24.313Z"}
+{"items":"10","level":"debug","message":"Fetched 2 sponsors from idurar_db.sponsors","page":"1","query":{},"timestamp":"2025-04-29T13:27:24.321Z","total":2}
+{"items":"10","level":"debug","message":"GET /sponsors - Query params:","page":"1","q":"","tier":"","timestamp":"2025-04-29T13:27:24.326Z"}
+{"items":"10","level":"debug","message":"Fetched 2 sponsors from idurar_db.sponsors","page":"1","query":{},"timestamp":"2025-04-29T13:27:24.331Z","total":2}
+{"level":"debug","message":"Fetched sponsor summary from idurar_db.sponsors","summary":{"avgFitScore":70,"tiers":[{"_id":"Tier 1","count":1},{"_id":"Tier 2","count":1}],"topProspects":[{"_id":"67f56101eb05806ed3ef826c","fit_score":80,"name":"Nike"},{"_id":"67f56101eb05806ed3ef826d","fit_score":60,"name":"Adidas"}],"totalEstCost":17500,"totalSponsors":2},"timestamp":"2025-04-29T13:27:24.333Z"}
+{"level":"debug","message":"Fetched sponsor summary from idurar_db.sponsors","summary":{"avgFitScore":70,"tiers":[{"_id":"Tier 1","count":1},{"_id":"Tier 2","count":1}],"topProspects":[{"_id":"67f56101eb05806ed3ef826c","fit_score":80,"name":"Nike"},{"_id":"67f56101eb05806ed3ef826d","fit_score":60,"name":"Adidas"}],"totalEstCost":17500,"totalSponsors":2},"timestamp":"2025-04-29T13:27:24.344Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:30.495Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:30.496Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:27:31.469Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:29:03.500Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:29:03.502Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:29:21.456Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:31:54.259Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:31:54.260Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:31:54.261Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:31:54.262Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:31:55.001Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:31:55.064Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:32:27.311Z"}
+{"level":"debug","message":"coreApi catch-all reached:","timestamp":"2025-04-29T13:32:36.503Z"}

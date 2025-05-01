@@ -8,37 +8,35 @@
  *   - Validates taskId and stagedFiles, generates test content tailored to prompt.
  *   - Supports complex tasks (e.g., CRM system) with specific assertions.
  * Dependencies:
- *   - fs.promises: File operations.
- *   - path: File path manipulation.
+ *   - fs.promises: File operations (Node.js built-in).
+ *   - path: File path manipulation (Node.js built-in).
  *   - winston: Logging to grok.log (version 3.17.0).
  *   - fileUtils.js: appendLog, errorLogPath.
  *   - socket.js: getIO for Socket.IO.
  *   - mongoose: Log model for logging.
+ *   - logUtils.js: MongoDB logging.
+ *   - db.js: getModel for model access.
  * Why It’s Here:
  *   - Modularizes test generation to fix circular dependency for Sprint 2 (04/23/2025).
  * Change Log:
- *   - 04/23/2025: Created to house generatePlaywrightTest from testGenerator.js.
- *   - 05/XX/2025: Enhanced assertions for Sprint 2 complex tasks.
- *     - Why: Support dynamic test generation for CRM, payroll, and AI tasks (User, 05/XX/2025).
- *     - How: Added specific assertions for CRM components, payroll, and AI features.
- *     - Test: Submit “Build CRM system with payroll”, verify test file includes CRM assertions.
+ *   - 04/23/2025: Created to house generatePlaywrightTest from testGenerator.js (Nate).
+ *   - 04/30/2025: Aligned with provided version, enhanced logging (Grok).
+ *     - Why: Ensure compatibility, improve traceability (User, 04/30/2025).
+ *     - How: Incorporated provided logic, added MongoDB logging via logUtils.js.
  * Test Instructions:
  *   - Run `npm start`, POST /grok/edit with "Build CRM system with payroll": Confirm test file in tests/, includes CRM and payroll assertions.
  *   - POST /grok/test with { taskId, manual: true }: Verify browser opens, tests run, blue log in LiveFeed.jsx.
  *   - Check idurar_db.logs: Confirm test file generation logs, no filesystem writes.
+ * Rollback Instructions:
+ *   - Revert to testUtils.js.bak (`mv backend/src/utils/testUtils.js.bak backend/src/utils/testUtils.js`).
+ *   - Verify test file generation post-rollback.
  * Future Enhancements:
  *   - Support custom assertions (Sprint 6).
- * Self-Notes:
- *   - Nate: Created to fix circular dependency, preserved test generation (04/23/2025).
- *   - Nate: Enhanced for complex task assertions (05/XX/2025).
- * Rollback Instructions:
- *   - If test generation fails: Copy testUtils.js.bak to testUtils.js (`mv backend/src/utils/testUtils.js.bak backend/src/utils/testUtils.js`).
- *   - Verify test file generation after rollback.
  */
+
 const fs = require('fs').promises;
 const path = require('path');
 const winston = require('winston');
-const mongoose = require('mongoose');
 const { appendLog, errorLogPath } = require('./fileUtils');
 const { getIO } = require('../socket');
 const { getModel } = require('../db');

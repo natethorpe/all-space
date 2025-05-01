@@ -1,68 +1,67 @@
 /*
  * File Path: backend/src/utils/systemAnalyzer.js
- * Purpose: Analyzes system state and performs maintenance tasks in Allur Space Console to ensure system health and scalability.
+ * Purpose: Analyzes system state and performs maintenance tasks in Allur Space Console, integrating Repomix for codebase analysis.
  * How It Works:
- *   - Analyzes file dependencies, system logs, and memory to build a dependency graph and detect issues (e.g., circular dependencies).
- *   - Performs maintenance tasks such as cleaning up old versioned files, pruning logs, and optimizing system resources.
- *   - Logs analysis results and maintenance actions to grok.log for debugging and traceability.
- *   - Emits taskUpdate events via Socket.IO for analysis errors, providing real-time feedback in GrokUI.jsx.
+ *   - analyzeSystem: Builds a dependency graph from system files, analyzes logs, and compares Repomix output with idurar_db.memory.
+ *   - maintainSystem: Cleans up old versioned files, prunes logs, and applies optimizations.
+ *   - generateSuggestions: Creates BackendProposal entries for Repomix discrepancies.
+ *   - Logs to grok.log (file operations) and idurar_db.logs (Repomix analysis) for traceability.
+ *   - Emits taskUpdate events via Socket.IO for real-time feedback in GrokUI.jsx.
  * Mechanics:
- *   - `analyzeSystem`: Scans system files, logs, and memory to build a dependency graph and collect insights (e.g., file dependencies, log errors).
- *   - `maintainSystem`: Cleans up old files, prunes logs, and applies optimizations based on analysis results.
- *   - Validates inputs (e.g., taskId) to prevent errors, logging issues to errorLogPath.
- *   - Uses fileUtils.js for file operations and log management, ensuring consistency with other utilities.
+ *   - Scans files for imports to build dependency graph, detects issues (e.g., circular dependencies).
+ *   - Uses repomixUtils.js to execute and parse all-space-codebase.txt, comparing with Memory collection.
+ *   - Validates taskId to prevent errors, logs issues to errorLogPath and idurar_db.logs.
+ *   - Cleans versioned files (e.g., Login-v1.jsx) and prunes logs exceeding 1MB.
  * Dependencies:
- *   - fs.promises: Asynchronous file operations for scanning system files (version built-in).
- *   - path: File path manipulation for file paths and log files (version built-in).
- *   - winston: Logging to grok.log for analysis and maintenance (version 3.17.0).
- *   - fileUtils.js: readSystemFiles, appendLog, errorLogPath, siteStructureLogs for file and log operations.
+ *   - fs.promises: File operations (Node.js built-in).
+ *   - path: Path manipulation (Node.js built-in).
+ *   - winston: Logging to grok.log (version 3.17.0).
+ *   - mongoose: Memory, BackendProposal models (version 8.13.2).
+ *   - fileUtils.js: readSystemFiles, appendLog, errorLogPath, siteStructureLogs, updateSiteStructure.
  *   - socket.js: getIO for Socket.IO emissions.
+ *   - repomixUtils.js: executeRepomix for codebase analysis.
+ *   - taskDedupeUtils.js: Prevents duplicate suggestions.
+ *   - logUtils.js: MongoDB logging for Repomix analysis.
+ *   - db.js: getModel for model access.
  * Dependents:
- *   - taskProcessorV18.js: Calls analyzeSystem to inform task processing with system state.
- *   - taskManager.js: Uses analyzeSystem via taskProcessorV18.js for maintenance tasks.
- *   - systemRoutes.js: Exposes /grok/analyze, /grok/maintenance endpoints for manual analysis and maintenance.
- *   - GrokUI.jsx: Receives taskUpdate events for analysis errors via useLiveFeed.js.
- * Why It’s Here:
- *   - Modularizes system analysis and maintenance from taskProcessorV18.js, reducing its size from ~1000 lines to ~150 lines (04/23/2025).
- *   - Supports Sprint 2 autonomy by providing system insights and maintenance, critical for Allur Crypto and ecosystem projects.
- *   - Enhances debugging with detailed dependency graph and maintenance logs.
- * Key Info:
- *   - Builds a dependency graph mapping file imports (e.g., grok.js -> taskRoutes.js), aiding conflict detection.
- *   - Performs maintenance tasks like cleaning versioned files (e.g., Login-v1.jsx) and pruning logs.
- *   - Logs analysis results (e.g., dependency graph, errors) and maintenance actions for traceability.
+ *   - taskProcessorV18.js: Calls analyzeSystem for task processing.
+ *   - taskManager.js: Uses analyzeSystem via taskProcessorV18.js.
+ *   - systemRoutes.js: Exposes /grok/analyze, /grok/maintenance, /system/repomix endpoints.
+ *   - GrokUI.jsx: Receives taskUpdate events via useLiveFeed.js.
+ * Why It's Here:
+ *   - Enhances system health for Sprint 2 with dependency analysis, maintenance, and Repomix integration (User, 04/30/2025).
  * Change Log:
- *   - 04/21/2025: Created to modularize system analysis and maintenance from taskProcessorV18.js.
- *     - Why: Reduce taskProcessorV18.js size, improve system health (User, 04/21/2025).
- *     - How: Implemented analyzeSystem, maintainSystem with basic file scanning and cleanup.
- *     - Test: Run /grok/analyze, verify system state; run /grok/maintenance, confirm cleanup.
- *   - 04/23/2025: Added dependency graph analysis.
- *     - Why: Improve conflict detection and maintenance for Sprint 2 (User, 04/23/2025).
- *     - How: Added dependency graph generation, enhanced logging for analysis results.
- *     - Test: Run /grok/analyze, verify dependency graph in grok.log; run /grok/maintenance, confirm old files cleaned.
+ *   - 04/21/2025: Created for system analysis and maintenance (Nate).
+ *   - 04/23/2025: Added dependency graph analysis (Nate).
+ *   - 04/30/2025: Integrated Repomix, updated to use provided fileUtils.js (Grok).
+ *     - Why: Enhance analysis with Repomix output, align with advanced file utilities (User, 04/30/2025).
+ *     - How: Added executeRepomix, memory comparison, BackendProposal generation, used updateSiteStructure.
  * Test Instructions:
  *   - Run `npm start`: Confirm no errors during analysis or maintenance.
- *   - GET /grok/analyze: Verify response includes dependency graph (e.g., { 'grok.js': ['taskRoutes.js'] }), live feed shows green “System analyzed” log.
- *   - Submit “Build CRM system”: Confirm analyzeSystem called, dependency graph logged.
- *   - Run /grok/maintenance: Verify old versioned files (e.g., Login-v1.jsx) deleted, logs pruned, live feed shows green “Maintenance completed” log.
- *   - Submit invalid taskId: Verify live feed shows red “Invalid taskId” log, error in grok.log.
- *   - Check grok.log: Confirm dependency graph, maintenance actions, and error logs with timestamps.
+ *   - GET /grok/analyze: Verify response includes dependencyGraph, repomixSummary, LiveFeed.jsx shows green "System analyzed" log.
+ *   - POST /api/system/repomix: Confirm 200 response with repomixSummary, suggestions in idurar_db.backendproposals.
+ *   - GET /grok/maintenance: Verify old files deleted, logs pruned, green "Maintenance completed" log.
+ *   - Submit invalid taskId: Verify red "Invalid taskId" log in LiveFeed.jsx, error in grok.log.
+ *   - Check grok.log: Confirm dependency graph, maintenance actions.
+ *   - Check idurar_db.logs: Confirm Repomix analysis, suggestion logs.
+ * Rollback Instructions:
+ *   - Revert to systemAnalyzer.js.bak (`mv backend/src/utils/systemAnalyzer.js.bak backend/src/utils/systemAnalyzer.js`).
+ *   - Verify /grok/analyze returns dependency graph post-rollback.
  * Future Enhancements:
- *   - Add real-time dependency conflict detection (e.g., circular imports) (Sprint 4).
- *   - Support automated maintenance scheduling via cron jobs (Sprint 5).
- *   - Integrate with Redis for caching system state to reduce analysis time (Sprint 5).
- *   - Add performance metrics (e.g., file scan time) to analysis results (Sprint 4).
- *   - Support multi-project analysis for ecosystem projects (Sprint 6).
- * Self-Notes:
- *   - Nate: Added dependency graph analysis, enhancing system maintenance capabilities (04/23/2025).
- *   - Nate: Preserved all taskProcessorV18.js analysis and maintenance functionality, improving insight generation (04/23/2025).
- *   - Nate: Triple-checked file scanning, log pruning, and Socket.IO integration (04/23/2025).
- *   - Nate: Added comprehensive notes for clarity, scalability, and alignment with Allur Space Console goals (04/23/2025).
+ *   - Detect circular dependencies in real-time (Sprint 4).
+ *   - Schedule maintenance via cron (Sprint 5).
+ *   - Cache system state in Redis (Sprint 5).
  */
+
 const fs = require('fs').promises;
 const path = require('path');
 const winston = require('winston');
-const { readSystemFiles, appendLog, errorLogPath, siteStructureLogs } = require('./fileUtils');
+const { readSystemFiles, appendLog, errorLogPath, siteStructureLogs, updateSiteStructure } = require('./fileUtils');
 const { getIO } = require('../socket');
+const { executeRepomix } = require('./repomixUtils');
+const { hasGeneratedFile, recordGeneratedFile } = require('./taskDedupeUtils');
+const { logInfo, logError } = require('./logUtils');
+const { getModel } = require('../db');
 
 const logger = winston.createLogger({
   level: 'debug',
@@ -97,7 +96,11 @@ async function analyzeSystem(taskId = 'system') {
   }
 
   try {
-    // Read system files to build dependency graph
+    // Update site structure
+    await updateSiteStructure();
+    await logInfo('Site structure updated', 'systemAnalyzer', { taskId, timestamp: new Date().toISOString() });
+
+    // Build dependency graph
     const systemFiles = await readSystemFiles();
     const dependencyGraph = {};
     for (const [filePath, content] of Object.entries(systemFiles)) {
@@ -108,7 +111,7 @@ async function analyzeSystem(taskId = 'system') {
       }).filter(Boolean);
     }
 
-    // Read logs for insights
+    // Analyze logs
     const logFiles = await siteStructureLogs();
     const logInsights = [];
     for (const logFile of logFiles) {
@@ -118,28 +121,66 @@ async function analyzeSystem(taskId = 'system') {
       }
     }
 
+    // Run Repomix analysis
+    const repomixSummary = await executeRepomix();
+    const repomixFiles = repomixSummary.files.map(file => file.path);
+
+    // Compare with memory
+    const Memory = await getModel('Memory');
+    const memories = await Memory.find({});
+    const memoryFiles = memories.map(memory => memory.content).filter(content => content.includes('path="'));
+    const missingInMemory = repomixFiles.filter(file => !memoryFiles.some(memory => memory.includes(file)));
+    const missingInRepomix = memoryFiles.filter(memory => !repomixFiles.some(file => memory.includes(file)));
+
+    // Generate suggestions
+    const suggestions = [];
+    if (missingInMemory.length > 0) {
+      suggestions.push({
+        type: 'add_to_memory',
+        description: `Add ${missingInMemory.length} files to memory`,
+        files: missingInMemory,
+      });
+    }
+    if (missingInRepomix.length > 0) {
+      suggestions.push({
+        type: 'remove_from_memory',
+        description: `Remove ${missingInRepomix.length} obsolete memory entries`,
+        files: missingInRepomix,
+      });
+    }
+    await generateSuggestions(suggestions, taskId);
+
     const systemState = {
-      memory: [], // Mock memory (replace with Memory model queries)
-      fileNotes: [], // Mock file notes (replace with readFileNotes)
+      memory: memories.map(m => ({ taskId: m.taskId, content: m.content })),
+      fileNotes: [], // Placeholder for readFileNotes
       logInsights,
       dependencyGraph,
-      taskCount: 0, // Mock task count (replace with Task.countDocuments)
+      taskCount: 0, // Placeholder for Task.countDocuments
+      repomixSummary: {
+        fileCount: repomixSummary.fileCount,
+        totalLines: repomixSummary.totalLines,
+        missingInMemory,
+        missingInRepomix,
+        suggestions: suggestions.length,
+      },
     };
 
-    logger.info(`System analyzed`, { taskId, dependencyGraph: JSON.stringify(dependencyGraph, null, 2), logInsightsLength: logInsights.length });
+    logger.info(`System analyzed`, { taskId, dependencyGraph: JSON.stringify(dependencyGraph, null, 2), logInsightsLength: logInsights.length, repomixSummary });
+    await logInfo('System analysis completed', 'systemAnalyzer', { taskId, repomixSummary, suggestions: suggestions.length, timestamp: new Date().toISOString() });
     getIO().emit('taskUpdate', {
       taskId,
       status: 'analyzed',
       message: `System analyzed successfully`,
       logColor: 'green',
       timestamp: new Date().toISOString(),
-      analysisDetails: { dependencyGraph, logInsightsLength: logInsights.length },
+      analysisDetails: { dependencyGraph, logInsightsLength: logInsights.length, repomixSummary },
     });
-    await appendLog(errorLogPath, `# System Analysis\nTask ID: ${taskId}\nDependency Graph: ${JSON.stringify(dependencyGraph, null, 2)}\nLog Insights: ${logInsights.length}`);
+    await appendLog(errorLogPath, `# System Analysis\nTask ID: ${taskId}\nDependency Graph: ${JSON.stringify(dependencyGraph, null, 2)}\nLog Insights: ${logInsights.length}\nRepomix Summary: ${JSON.stringify(repomixSummary, null, 2)}`);
 
     return systemState;
   } catch (err) {
     logger.error(`System analysis failed: ${err.message}`, { taskId, stack: err.stack });
+    await logError(`System analysis failed: ${err.message}`, 'systemAnalyzer', { taskId, stack: err.stack, timestamp: new Date().toISOString() });
     getIO().emit('taskUpdate', {
       taskId,
       status: 'failed',
@@ -172,37 +213,34 @@ async function maintainSystem(taskId = 'system') {
     // Clean up old versioned files
     const targetDir = path.join(__dirname, '../../../frontend/src/pages');
     const files = await fs.readdir(targetDir);
+    let cleanedFiles = 0;
     for (const file of files) {
       if (file.match(/-v\d+\.jsx$/)) {
         await fs.unlink(path.join(targetDir, file)).catch(() => logger.warn(`File already removed`, { taskId, file }));
         logger.info(`Cleaned up old versioned file`, { taskId, file });
+        cleanedFiles++;
       }
     }
 
     // Prune logs
-    const logFiles = await siteStructureLogs();
-    for (const logFile of logFiles) {
-      const stats = await fs.stat(logFile);
-      if (stats.size > 1024 * 1024) {
-        const content = await fs.readFile(logFile, 'utf8');
-        const lines = content.split('\n').slice(-1000); // Keep last 1000 lines
-        await fs.writeFile(logFile, lines.join('\n'), 'utf8');
-        logger.info(`Pruned log file`, { taskId, logFile });
-      }
-    }
+    const report = await maintainLogFiles();
+    const prunedLogs = report.logs.length;
 
-    logger.info(`System maintenance completed`, { taskId, cleanedFiles: files.filter(f => f.match(/-v\d+\.jsx$/)).length, prunedLogs: logFiles.length });
+    logger.info(`System maintenance completed`, { taskId, cleanedFiles, prunedLogs });
+    await logInfo('System maintenance completed', 'systemAnalyzer', { taskId, cleanedFiles, prunedLogs, timestamp: new Date().toISOString() });
     getIO().emit('taskUpdate', {
       taskId,
       status: 'maintained',
       message: `System maintenance completed`,
       logColor: 'green',
       timestamp: new Date().toISOString(),
-      maintenanceDetails: { cleanedFiles: files.filter(f => f.match(/-v\d+\.jsx$/)).length, prunedLogs: logFiles.length },
+      maintenanceDetails: { cleanedFiles, prunedLogs },
     });
-    await appendLog(errorLogPath, `# System Maintenance\nTask ID: ${taskId}\nCleaned Files: ${files.filter(f => f.match(/-v\d+\.jsx$/)).length}\nPruned Logs: ${logFiles.length}`);
+    await appendLog(errorLogPath, `# System Maintenance\nTask ID: ${taskId}\nCleaned Files: ${cleanedFiles}\nPruned Logs: ${prunedLogs}`);
+
   } catch (err) {
     logger.error(`System maintenance failed: ${err.message}`, { taskId, stack: err.stack });
+    await logError(`System maintenance failed: ${err.message}`, 'systemAnalyzer', { taskId, stack: err.stack, timestamp: new Date().toISOString() });
     getIO().emit('taskUpdate', {
       taskId,
       status: 'failed',
@@ -216,4 +254,37 @@ async function maintainSystem(taskId = 'system') {
   }
 }
 
-module.exports = { analyzeSystem, maintainSystem };
+async function generateSuggestions(suggestions, taskId) {
+  const BackendProposal = await getModel('BackendProposal');
+  for (const suggestion of suggestions) {
+    const dedupeKey = `suggestion_${suggestion.type}_${suggestion.description}_${taskId}`;
+    if (await hasGeneratedFile(dedupeKey)) {
+      await logInfo('Skipped duplicate suggestion', 'systemAnalyzer', {
+        dedupeKey,
+        taskId,
+        timestamp: new Date().toISOString(),
+      });
+      continue;
+    }
+
+    const proposal = new BackendProposal({
+      taskId,
+      file: 'systemAnalyzer.js',
+      content: JSON.stringify(suggestion),
+      status: 'pending',
+      createdAt: new Date(),
+    });
+
+    await proposal.save();
+    await recordGeneratedFile(dedupeKey);
+    await logInfo('Generated BackendProposal for suggestion', 'systemAnalyzer', {
+      suggestionType: suggestion.type,
+      description: suggestion.description,
+      proposalId: proposal._id,
+      taskId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+}
+
+module.exports = { analyzeSystem, maintainSystem, generateSuggestions };

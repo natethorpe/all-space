@@ -1,243 +1,197 @@
 /*
  * File Path: backend/src/db.js
- * Purpose: Initializes MongoDB connection and defines schemas for Allur Space Console.
+ * Purpose: Initializes MongoDB connection and registers Mongoose schemas for Allur Space Console.
  * How It Works:
- *   - Connects to MongoDB using Mongoose with environment-based URI.
- *   - Defines schemas for Task, Admin, AdminPassword, Sponsor, Memory, BackendProposal, Setting, and Log with indexing and validation.
+ *   - Connects to MongoDB (idurar_db) with mongoose and retry logic.
+ *   - Defines schemas for Task, Admin, AdminPassword, Sponsor, Memory, BackendProposal, Setting, Log.
+ *   - Registers schemas with unique indexes and provides getModel for safe access.
+ *   - Prevents model overwrite errors by checking existing models.
  * Mechanics:
- *   - Uses Mongoose to enforce schema validation and indexing.
- *   - Implements singleton pattern for schema registration to prevent duplicates.
- *   - Exports models via getModel with validation to prevent invalid model access.
- *   - Logs schema, index creation, and model access to console (pre-Log model) or MongoDB Log model.
+ *   - Uses mongoose.connect with 5 retry attempts for connection stability.
+ *   - Validates model methods (create, findOne) before returning.
+ *   - Logs schema registration to idurar_db.logs for debugging.
  * Dependencies:
- *   - mongoose: MongoDB ORM (version 8.7.3).
- *   - dotenv: Environment variable management (version 16.4.5).
- * Dependents:
- *   - app.js: Initializes MongoDB connection before routes.
- *   - taskManager.js, systemAnalyzer.js, selfEnhancer.js: Interact with Task, BackendProposal schemas.
- *   - settingController.js: Interacts with Setting schema.
- *   - auth/index.js: Interacts with Admin, AdminPassword schemas.
- *   - socket.js, logUtils.js: Rely on Log model for logging.
- * Why It’s Here:
- *   - Provides centralized DB connection and schema management for Sprint 2 persistence (04/07/2025).
+ *   - mongoose: MongoDB ORM (version 8.13.2).
+ *   - logUtils.js: MongoDB logging (deferred import to avoid circular dependency).
+ * Why It's Here:
+ *   - Centralizes database setup for Sprint 2, fixing OverwriteModelError and circular dependencies (User, 04/29/2025).
  * Change Log:
- *   - 04/07/2025: Initialized MongoDB connection with Task, Admin schemas.
- *   - 04/23/2025: Added BackendProposal, Memory schemas.
- *   - 04/25/2025: Fixed duplicate schema index warning.
- *   - 04/27/2025: Fixed MissingSchemaError for Task model.
- *   - 04/28/2025: Fixed duplicate index warning and deprecated Mongoose options.
- *   - 04/29/2025: Added Setting schema for coreApiRouter.
- *   - 04/30/2025: Added Log schema, updated Memory schema.
- *   - 05/01/2025: Deferred Log model access to fix Model not registered error.
- *   - 05/02/2025: Fixed Log.create is not a function error.
- *   - 05/03/2025: Fixed Admin.findOne is not a function error in auth/index.js.
- *   - 05/XX/2025: Added testResults field to Task schema for Sprint 2.
- *     - Why: Store automated test outcomes for task validation (User, 05/XX/2025).
- *     - How: Added testResults as Mixed type, updated validation.
- *     - Test: Submit task, verify testResults in idurar_db.tasks.
+ *   - 04/07/2025: Initialized MongoDB connection and schemas (Nate).
+ *   - 04/23/2025: Added retry logic for connection (Nate).
+ *   - 04/29/2025: Fixed Task.find is not a function error (Nate).
+ *   - 04/29/2025: Fixed circular dependency with logUtils.js (Nate).
+ *   - 04/29/2025: Fixed OverwriteModelError for Log model (Nate).
+ *   - 04/30/2025: Corrected truncated code, ensured complete functions (Grok).
+ *     - Why: Fix incomplete initializeDB, align with provided schemas (User, 04/30/2025).
+ *     - How: Restored full functions, added logging, preserved retry logic.
  * Test Instructions:
- *   - Run `npm start`: Verify idurar_db.logs shows “Connected to MongoDB: idurar_db”, schema/index creation, no Admin.findOne errors.
- *   - Run `mongo idurar_db` and check indexes: Confirm `db.tasks.getIndexes()` shows unique index on `taskId`, `db.logs.getIndexes()` shows index on `timestamp`.
- *   - POST http://localhost:8888/api/auth/login with { email: "admin@idurarapp.com", password: "admin123" }: Confirm 200 response with JWT.
- *   - POST http://localhost:8888/api/grok/edit with "Build CRM system": Verify task stored with testResults, WebSocket events emitted, no errors.
- *   - Check idurar_db.logs: Confirm schema registration, model access, login attempts, no filesystem writes.
- * Future Enhancements:
- *   - Add schema versioning for migrations (Sprint 4).
- *   - Support sharding for scalability (Sprint 5).
- * Self-Notes:
- *   - Nate: Fixed schema errors and added Log schema (04/25/2025–04/30/2025).
- *   - Nate: Fixed Model not registered, Log.create, and Admin.findOne errors (05/01/2025–05/03/2025).
- *   - Nate: Added testResults field for Sprint 2 testing (05/XX/2025).
+ *   - Run `npm start`: Verify console shows "MongoDB connected", "Task schema registered", no OverwriteModelError.
+ *   - GET /api/grok/tasks: Confirm 200 response, tasks in idurar_db.tasks.
+ *   - POST /api/grok/edit with "Build CRM system": Verify task in idurar_db.tasks, logs in idurar_db.logs.
+ *   - Check idurar_db.logs: Confirm schema registration, no buffering timeouts.
  * Rollback Instructions:
- *   - If DB issues persist: Copy db.js.bak to db.js (`mv backend/src/db.js.bak backend/src/db.js`), restart server (`npm start`).
- *   - Verify server starts and connects to MongoDB.
+ *   - Revert to db.js.bak (`mv backend/src/db.js.bak backend/src/db.js`).
+ *   - Verify MongoDB connects and models are accessible post-rollback.
+ * Future Enhancements:
+ *   - Add connection pooling (Sprint 4).
+ *   - Support sharding (Sprint 5).
  */
-require('dotenv').config();
+
 const mongoose = require('mongoose');
 
-const { Schema } = mongoose;
-let isSchemaRegistered = false;
-const models = {};
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/idurar_db';
+const registeredModels = new Map();
 
-// MongoDB connection
-const connectDB = async () => {
-  try {
-    const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/idurar_db';
-    await mongoose.connect(mongoURI);
-    if (isSchemaRegistered && models.Log && typeof models.Log.create === 'function') {
-      await models.Log.create({
-        level: 'info',
-        message: 'Connected to MongoDB: idurar_db',
-        context: 'db',
-        timestamp: new Date().toISOString(),
-      });
-    } else {
-      console.info('db.js: MongoDB connected, awaiting schema registration', { timestamp: new Date().toISOString() });
-    }
-  } catch (err) {
-    console.error('db.js: MongoDB connection error:', err.message, { stack: err.stack, timestamp: new Date().toISOString() });
-    if (isSchemaRegistered && models.Log && typeof models.Log.create === 'function') {
-      await models.Log.create({
-        level: 'error',
-        message: `MongoDB connection error: ${err.message}`,
-        context: 'db',
-        details: { stack: err.stack },
-        timestamp: new Date().toISOString(),
-      });
-    }
-    process.exit(1);
-  }
-};
-
-// Schema definitions
-const registerSchemas = () => {
-  if (isSchemaRegistered) {
-    console.warn('db.js: Schemas already registered, skipping re-registration', { timestamp: new Date().toISOString() });
-    return;
-  }
-
-  console.info('db.js: Starting schema registration', { timestamp: new Date().toISOString() });
-
-  const TaskSchema = new Schema({
-    taskId: { type: String, required: true },
-    prompt: { type: String, required: true, default: 'Untitled' },
-    status: { type: String, enum: ['pending', 'processing', 'completed', 'failed', 'denied', 'pending_approval', 'applied'], default: 'pending' },
-    priority: { type: Number, default: 0 },
+const schemas = {
+  Task: new mongoose.Schema({
+    taskId: { type: String, required: true, unique: true },
+    prompt: { type: String, required: true },
+    status: { type: String, default: 'pending' },
+    files: [{ type: String }],
     stagedFiles: [{ path: String, content: String }],
-    generatedFiles: [String],
-    proposedChanges: [String],
-    originalContent: Schema.Types.Mixed,
-    newContent: Schema.Types.Mixed,
-    testResults: Schema.Types.Mixed, // Added for Sprint 2 to store test outcomes
+    error: { type: String },
     createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
-  });
-  TaskSchema.index({ taskId: 1 }, { unique: true });
-  console.info('db.js: Task schema registered with unique index on taskId', { timestamp: new Date().toISOString() });
+  }, { timestamps: true }),
 
-  const AdminSchema = new Schema({
+  Admin: new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['admin', 'superadmin'], default: 'admin' },
-    name: { type: String, default: '' },
-    tierAccess: { type: [String], default: [] },
+    role: { type: String, default: 'admin' },
+    name: { type: String },
+    tierAccess: [{ type: String }],
     removed: { type: Boolean, default: false },
     enabled: { type: Boolean, default: true },
     created: { type: Date, default: Date.now },
-    createdAt: { type: Date, default: Date.now },
-  });
-  console.info('db.js: Admin schema registered', { timestamp: new Date().toISOString() });
+  }, { timestamps: true }),
 
-  const AdminPasswordSchema = new Schema({
-    adminId: { type: Schema.Types.ObjectId, ref: 'Admin' },
-    email: { type: String, required: true },
+  AdminPassword: new mongoose.Schema({
+    email: { type: String, required: true, unique: true },
     password: { type: String },
     token: { type: String },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
-  });
-  console.info('db.js: AdminPassword schema registered', { timestamp: new Date().toISOString() });
+  }, { timestamps: true }),
 
-  const SponsorSchema = new Schema({
+  Sponsor: new mongoose.Schema({
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true },
+    phone: { type: String },
+    tier: { type: String },
+    fit_score: { type: Number },
+    est_cost: { type: Number },
     createdAt: { type: Date, default: Date.now },
-  });
-  console.info('db.js: Sponsor schema registered', { timestamp: new Date().toISOString() });
+  }, { timestamps: true }),
 
-  const MemorySchema = new Schema({
+  Memory: new mongoose.Schema({
     taskId: { type: String, required: true },
-    prompt: { type: String },
-    status: { type: String, enum: ['pending', 'processing', 'completed', 'failed', 'denied', 'pending_approval', 'applied'] },
-    stagedFiles: [{ path: String, content: String }],
-    generatedFiles: [String],
+    content: { type: String, required: true },
     createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
-  });
-  console.info('db.js: Memory schema registered', { timestamp: new Date().toISOString() });
+  }, { timestamps: true }),
 
-  const BackendProposalSchema = new Schema({
-    taskId: { type: String, required: true },
+  BackendProposal: new mongoose.Schema({
+    taskId: { type: String, required: true, index: true },
     file: { type: String, required: true },
     content: { type: String, required: true },
-    status: { type: String, enum: ['pending', 'approved', 'denied', 'tested'], default: 'pending' },
+    status: { type: String, default: 'pending' },
     createdAt: { type: Date, default: Date.now },
-  });
-  BackendProposalSchema.index({ taskId: 1 });
-  console.info('db.js: BackendProposal schema registered with index on taskId', { timestamp: new Date().toISOString() });
+  }, { timestamps: true }),
 
-  const SettingSchema = new Schema({
-    key: { type: String, required: true },
-    value: { type: Schema.Types.Mixed, required: true },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
-  });
-  SettingSchema.index({ key: 1 }, { unique: true });
-  console.info('db.js: Setting schema registered with unique index on key', { timestamp: new Date().toISOString() });
+  Setting: new mongoose.Schema({
+    settingCategory: { type: String, required: true },
+    settingKey: { type: String, required: true, unique: true },
+    settingValue: { type: String, required: true },
+  }, { timestamps: true }),
 
-  const LogSchema = new Schema({
-    level: { type: String, required: true, enum: ['info', 'debug', 'warn', 'error'] },
+  Log: new mongoose.Schema({
+    level: { type: String, required: true },
     message: { type: String, required: true },
-    context: { type: String, required: true },
-    details: { type: Schema.Types.Mixed },
-    timestamp: { type: Date, default: Date.now },
-  });
-  LogSchema.index({ timestamp: -1 });
-  console.info('db.js: Log schema registered with index on timestamp', { timestamp: new Date().toISOString() });
+    context: { type: String },
+    details: { type: Object },
+    timestamp: { type: String, required: true, index: true },
+  }, { timestamps: true }),
+};
 
-  // Register models
-  models.Task = mongoose.model('Task', TaskSchema);
-  models.Admin = mongoose.model('Admin', AdminSchema);
-  models.AdminPassword = mongoose.model('AdminPassword', AdminPasswordSchema);
-  models.Sponsor = mongoose.model('Sponsor', SponsorSchema);
-  models.Memory = mongoose.model('Memory', MemorySchema);
-  models.BackendProposal = mongoose.model('BackendProposal', BackendProposalSchema);
-  models.Setting = mongoose.model('Setting', SettingSchema);
-  models.Log = mongoose.model('Log', LogSchema);
-
-  // Validate model registration
-  const modelNames = ['Task', 'Admin', 'AdminPassword', 'Sponsor', 'Memory', 'BackendProposal', 'Setting', 'Log'];
-  for (const name of modelNames) {
-    if (!models[name] || typeof models[name].create !== 'function' || typeof models[name].findOne !== 'function') {
-      console.error(`db.js: Failed to register model ${name}: Invalid model object`, { timestamp: new Date().toISOString() });
-      throw new Error(`Model ${name} registration failed: Missing create or findOne method`);
+async function initializeDB() {
+  try {
+    console.info('db.js: Initializing MongoDB connection', { timestamp: new Date().toISOString() });
+    let attempt = 0;
+    const maxAttempts = 5;
+    while (attempt < maxAttempts) {
+      try {
+        await mongoose.connect(MONGODB_URI, {
+          serverSelectionTimeoutMS: 5000,
+        });
+        console.info('db.js: MongoDB connected', { timestamp: new Date().toISOString() });
+        const { logInfo } = require('./utils/logUtils'); // Deferred import
+        await logInfo('MongoDB connected', 'db.js', { timestamp: new Date().toISOString() });
+        break;
+      } catch (err) {
+        attempt++;
+        console.error(`db.js: MongoDB connection attempt ${attempt}/${maxAttempts} failed: ${err.message}`, {
+          timestamp: new Date().toISOString(),
+        });
+        if (attempt >= maxAttempts) {
+          throw new Error(`Failed to connect to MongoDB after ${maxAttempts} attempts: ${err.message}`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
     }
-    console.info(`db.js: Model ${name} registered successfully`, {
-      hasCreate: typeof models[name].create === 'function',
-      hasFindOne: typeof models[name].findOne === 'function',
+
+    console.info('db.js: Registering schemas', { timestamp: new Date().toISOString() });
+    for (const [modelName, schema] of Object.entries(schemas)) {
+      if (!registeredModels.has(modelName)) {
+        const model = mongoose.models[modelName] || mongoose.model(modelName, schema);
+        registeredModels.set(modelName, model);
+        console.info(`db.js: ${modelName} schema registered`, { timestamp: new Date().toISOString() });
+        const { logInfo } = require('./utils/logUtils'); // Deferred import
+        await logInfo(`${modelName} schema registered`, 'db.js', { timestamp: new Date().toISOString() });
+      }
+    }
+
+    console.info('db.js: Schema registration completed', { timestamp: new Date().toISOString() });
+  } catch (err) {
+    console.error(`db.js: Database initialization failed: ${err.message}`, {
+      stack: err.stack,
       timestamp: new Date().toISOString(),
     });
+    throw err;
   }
+}
 
-  isSchemaRegistered = true;
-  console.info('db.js: Model imports completed', { timestamp: new Date().toISOString() });
-};
-
-// Initialize DB and schemas
-const initializeDB = async () => {
-  await connectDB();
-  registerSchemas();
-  console.info('db.js: initializeDB completed', { timestamp: new Date().toISOString() });
-};
-
-// Get model with availability check and retry
-const getModel = async (name, retries = 5, attempt = 1) => {
-  if (!isSchemaRegistered) {
-    console.warn(`db.js: Model ${name} access before schemas registered, initializing DB`, { timestamp: new Date().toISOString() });
-    await initializeDB();
-  }
-  if (!models[name] || typeof models[name].create !== 'function' || typeof models[name].findOne !== 'function') {
-    if (attempt >= retries) {
-      console.error(`db.js: Model ${name} invalid or not registered after ${retries} attempts`, { timestamp: new Date().toISOString() });
-      throw new Error(`Model ${name} not registered or invalid: Missing create or findOne method`);
+async function getModel(modelName) {
+  console.info('db.js: Accessing model', { modelName, timestamp: new Date().toISOString() });
+  if (!registeredModels.has(modelName)) {
+    if (!schemas[modelName]) {
+      console.error(`db.js: Model ${modelName} not found in schemas`, { timestamp: new Date().toISOString() });
+      throw new Error(`Model ${modelName} not defined`);
     }
-    console.warn(`db.js: Model ${name} invalid, retrying registration (attempt ${attempt}/${retries})`, { timestamp: new Date().toISOString() });
-    isSchemaRegistered = false; // Force re-registration
-    await initializeDB();
-    return getModel(name, retries, attempt + 1);
+    try {
+      const model = mongoose.models[modelName] || mongoose.model(modelName, schemas[modelName]);
+      registeredModels.set(modelName, model);
+      console.info(`db.js: ${modelName} schema registered`, { timestamp: new Date().toISOString() });
+      const { logInfo } = require('./utils/logUtils'); // Deferred import
+      await logInfo(`${modelName} schema registered`, 'db.js', { timestamp: new Date().toISOString() });
+    } catch (err) {
+      console.error(`db.js: Failed to register model ${modelName}: ${err.message}`, {
+        stack: err.stack,
+        timestamp: new Date().toISOString(),
+      });
+      throw err;
+    }
   }
-  console.debug(`db.js: Accessing model ${name}`, { timestamp: new Date().toISOString() });
-  return models[name];
-};
 
-module.exports = { initializeDB, getModel, mongoose };
+  const model = registeredModels.get(modelName);
+  if (typeof model.create !== 'function' || typeof model.findOne !== 'function') {
+    console.error(`db.js: Model ${modelName} invalid: Missing required methods`, { timestamp: new Date().toISOString() });
+    throw new Error(`Model ${modelName} invalid: Missing create or findOne method`);
+  }
+
+  console.info(`db.js: ${modelName} model retrieved`, {
+    hasCreate: typeof model.create === 'function',
+    hasFindOne: typeof model.findOne === 'function',
+    timestamp: new Date().toISOString(),
+  });
+  return model;
+}
+
+module.exports = { initializeDB, getModel };

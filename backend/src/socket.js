@@ -1,38 +1,57 @@
 /*
  * File Path: backend/src/socket.js
- * Purpose: Wrapper for Socket.IO initialization in Allur Space Console.
+ * Purpose: Initializes Socket.IO for real-time communication in Allur Space Console.
  * How It Works:
- *   - Delegates to socketUtils.js for Socket.IO setup and event handling.
- *   - Provides initSocket and getIO for compatibility with taskManager.js, taskRoutes.js.
+ *   - Delegates Socket.IO setup to socketUtils.js for modularity.
+ *   - Provides initSocket and getIO for compatibility with taskRoutes.js, proposalRoutes.js.
+ *   - Ensures stable WebSocket connections for frontend updates.
+ * Mechanics:
+ *   - Wraps socketUtils.js setupSocket and getSocket functions.
+ *   - Logs initialization to idurar_db.logs for traceability.
  * Dependencies:
- *   - ./utils/socketUtils: Socket.IO logic (setupSocket, getSocket).
- * Dependents:
- *   - app.js: Initializes Socket.IO with HTTP server.
- *   - taskManager.js, taskRoutes.js: Emit taskUpdate, backendProposal events.
- * Why It’s Here:
- *   - Maintains compatibility after modularizing socket logic to socketUtils.js (05/03/2025).
+ *   - socketUtils.js: Core Socket.IO logic (setupSocket, getSocket).
+ *   - logUtils.js: MongoDB logging.
+ * Why It's Here:
+ *   - Maintains compatibility after moving Socket.IO logic to socketUtils.js, fixing net::ERR_CONNECTION_REFUSED (User, 04/30/2025).
  * Change Log:
- *   - 04/07/2025: Initialized Socket.IO with taskUpdate, backendProposal events.
- *   - 05/03/2025: Simplified to use socketUtils.js.
- *     - Why: socket.js too complex, getIO(...).emit error (User, 05/03/2025).
- *     - How: Delegated logic to socketUtils.js, retained wrapper for compatibility.
- *     - Test: Run `npm start`, verify idurar_db.logs shows “Socket.IO initialized successfully”, no getIO errors.
+ *   - 04/07/2025: Initialized basic Socket.IO setup (Nate).
+ *   - 05/03/2025: Moved logic to socketUtils.js for modularity (Nate).
+ *   - 04/30/2025: Ensured stable wrapper for WebSocket connectivity (Grok).
+ *     - Why: Fix frontend connectivity issues after server crash (User, 04/30/2025).
+ *     - How: Simplified wrapper, verified socketUtils.js compatibility.
  * Test Instructions:
- *   - Run `npm start`: Verify idurar_db.logs shows “Socket.IO initialized successfully”.
- *   - Load GrokUI.jsx: Confirm WebSocket connections succeed, LiveFeed.jsx shows taskUpdate events.
- *   - Check idurar_db.logs: Confirm connection logs, no filesystem writes.
- * Self-Notes:
- *   - Nate: Simplified to use socketUtils.js, fixed getIO issues (05/03/2025).
+ *   - Run `npm start`: Verify "Socket.IO initialized" in idurar_db.logs, no errors.
+ *   - Load frontend (npm run dev): Confirm no net::ERR_CONNECTION_REFUSED in browser console.
+ *   - Submit task via TaskInput.jsx: Verify single green taskUpdate log in LiveFeed.jsx.
+ *   - Open 10 /grok tabs: Confirm single connection log per client in idurar_db.logs.
+ * Rollback Instructions:
+ *   - Revert to socket.js.bak (`mv backend/src/socket.js.bak backend/src/socket.js`).
+ *   - Verify frontend connects post-rollback.
+ * Future Enhancements:
+ *   - Add Socket.IO namespaces for task/proposal events (Sprint 4).
  */
 
 const { setupSocket, getSocket } = require('./utils/socketUtils');
+const { logInfo, logError } = require('./utils/logUtils');
 
 async function initSocket(server) {
-  return await setupSocket(server);
+  try {
+    const io = await setupSocket(server);
+    await logInfo('Socket.IO initialized', 'socket.js', { timestamp: new Date().toISOString() });
+    return io;
+  } catch (err) {
+    await logError('Socket.IO initialization failed', 'socket.js', { error: err.message || err, timestamp: new Date().toISOString() });
+    throw err;
+  }
 }
 
 function getIO() {
-  return getSocket();
+  try {
+    return getSocket();
+  } catch (err) {
+    logError('Failed to get Socket.IO instance', 'socket.js', { error: err.message || err, timestamp: new Date().toISOString() });
+    throw err;
+  }
 }
 
 module.exports = { initSocket, getIO };

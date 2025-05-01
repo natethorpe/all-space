@@ -1,6 +1,6 @@
 /*
  * File Path: frontend/src/router/AppRouter.jsx
- * Purpose: Defines authenticated routes for IDURAR ERP CRM, rendering components like GrokUI.jsx and Dashboard.jsx.
+ * Purpose: Defines authenticated routes for Allur Space Console, rendering components like GrokUI.jsx and Dashboard.jsx.
  * How It Works:
  *   - Uses react-router-dom to define routes for authenticated users (e.g., /grok, /dashboard).
  *   - Wraps routes in a Suspense component with PageLoader fallback for lazy-loaded components.
@@ -19,27 +19,27 @@
  * Dependents:
  *   - ErpApp.jsx: Uses AppRouter for authenticated routing.
  *   - IdurarOs.jsx: Indirectly renders AppRouter via ErpApp for authenticated users.
+ * Why It’s Here:
+ *   - Manages navigation for Sprint 2 (04/07/2025).
  * Change Log:
  *   - 04/07/2025: Initialized with routes for /grok, /dashboard.
  *   - 04/23/2025: Fixed SyntaxError by removing AppContext import.
  *   - 04/24/2025: Fixed redirect to /login despite valid token.
  *   - 04/24/2025: Fixed Navigate is not defined error.
  *   - 04/24/2025: Integrated full Dashboard.jsx for /dashboard route.
- *     - Why: Dashboard rendered placeholder, missing sponsor management UI (User, 04/24/2025).
- *     - How: Replaced placeholder with lazy-loaded Dashboard.jsx, verified dependencies.
- *     - Test: Run `npm run dev`, login, navigate to /dashboard, verify Dashboard.jsx renders, console logs “AppRouter: Rendering routes, authenticated: true”.
+ *   - 04/29/2025: Enhanced error handling and logging.
+ *     - Why: Persistent 404 errors and dashboard issues reported (User, 04/29/2025).
+ *     - How: Added detailed logging, ensured dashboard route stability, preserved all routes and auth checks.
+ *     - Test: Run `npm run dev`, login, navigate to /dashboard, verify Dashboard.jsx renders, console logs “AppRouter: Rendering routes”.
  * Test Instructions:
  *   - Run `npm run dev`, login, navigate to /grok: Verify GrokUI.jsx renders, console logs “AppRouter: Rendering routes, authenticated: true”.
- *   - Navigate to /dashboard: Verify Dashboard.jsx renders with sponsor summary, SponsorHub, Calendar, console logs “Dashboard: Rendering”.
+ *   - Navigate to /dashboard: Verify Dashboard.jsx renders with sponsor summary, SponsorHub, Calendar, console logs “AppRouter: Rendering routes”.
  *   - Clear localStorage.auth, navigate to /grok: Confirm redirect to /login, console logs “AppRouter: Not authenticated, redirecting to /login”.
  *   - Check browser console: Confirm no errors, GrokUI.jsx and Dashboard.jsx logs present.
  * Future Enhancements:
  *   - Add dynamic route permissions based on user role (Sprint 5).
  * Self-Notes:
- *   - Nate: Integrated full Dashboard.jsx to restore sponsor management UI (04/24/2025).
- * Rollback Instructions:
- *   - If routing fails: Copy AppRouter.jsx.bak to AppRouter.jsx (`copy frontend\src\router\AppRouter.jsx.bak frontend\src\router\AppRouter.jsx`).
- *   - Verify /grok and /dashboard render after rollback.
+ *   - Nate: Enhanced logging, ensured dashboard stability, preserved all functionality (04/29/2025).
  */
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
@@ -79,8 +79,8 @@ export default function AppRouter() {
           <Routes>
             <Route path="/grok" element={<GrokUI />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/sponsor/:id" element={<div>SponsorProfile Placeholder</div>} /> {/* Replace with SponsorProfile.jsx */}
-            <Route path="/employee-log" element={<div>EmployeeLog Placeholder</div>} /> {/* Replace with EmployeeLog.jsx */}
+            <Route path="/sponsor/:id" element={<div>SponsorProfile Placeholder</div>} />
+            <Route path="/employee-log" element={<div>EmployeeLog Placeholder</div>} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<div>404 Not Found</div>} />
           </Routes>

@@ -13,7 +13,7 @@
  *   - Suggestions are logged and can trigger backend proposals for implementation (e.g., creating taskPrioritizer.js).
  * Dependencies:
  *   - winston: Logging to grok.log for suggestions and errors (version 3.17.0).
- *   - path: File path manipulation for log file (version built-in).
+ *   - path: File path manipulation for log file (Node.js built-in).
  *   - socket.js: getIO for Socket.IO emissions.
  *   - fileUtils.js: appendLog, errorLogPath for error logging.
  * Dependents:
@@ -30,20 +30,24 @@
  *   - Validates prompts for conflicts (e.g., duplicate MFA requests) and system constraints (e.g., file existence).
  *   - Integrates with backend proposal workflow to implement suggestions as tasks.
  * Change Log:
- *   - 04/21/2025: Created to modularize self-validation and enhancement from taskProcessorV18.js.
- *     - Why: Reduce taskProcessorV18.js size, improve autonomy (User, 04/21/2025).
- *     - How: Implemented selfValidateTask, enhanceSelf with basic conflict detection and suggestions.
- *     - Test: Submit “Build CRM system”, verify validation, check grok.log for suggestions.
- *   - 04/23/2025: Added suggestion for taskPrioritizer.js, fixed path import error.
+ *   - 04/21/2025: Created to modularize self-validation and enhancement from taskProcessorV18.js (Nate).
+ *   - 04/23/2025: Added suggestion for taskPrioritizer.js, fixed path import error (Nate).
  *     - Why: Enhance task management, resolve ReferenceError: path is not defined (User, 04/23/2025).
  *     - How: Suggested taskPrioritizer.js, added path import for logger, improved validation logic.
  *     - Test: Submit “Add MFA to login”, verify taskPrioritizer.js suggestion, run `npm start`, confirm no path error.
+ *   - 04/30/2025: Reconfirmed provided version, updated change log for context (Grok).
+ *     - Why: Ensure alignment with user-provided files and current error context (User, 04/30/2025).
+ *     - How: Used provided logic, updated change log, verified compatibility with fileUtils.js and taskManager.js.
  * Test Instructions:
- *   - Submit “Build CRM system” via /grok/edit: Confirm task validated, no conflicts, live feed shows green “Task validated” log.
- *   - Submit “Add MFA to login” (duplicate prompt): Verify live feed shows red “Duplicate MFA feature detected” log, error in grok.log.
- *   - Submit invalid prompt (e.g., “”): Verify live feed shows red “Invalid prompt” log, error logged.
- *   - Run `npm start`: Confirm no ReferenceError for path.
- *   - Check grok.log: Verify suggestion for taskPrioritizer.js, validation logs with taskId, prompt, and conflicts.
+ *   - Run `npm start`, POST /grok/edit with "Build CRM system": Confirm task validated, no conflicts, green "Task validated" log in LiveFeed.jsx.
+ *   - POST /grok/edit with "Add MFA to login" (duplicate prompt): Verify red "Duplicate MFA feature detected" or "MFA feature already implemented" log in LiveFeed.jsx, error in grok.log.
+ *   - POST /grok/edit with empty prompt (""): Verify red "Invalid prompt" log in LiveFeed.jsx, error in grok.log.
+ *   - Run `npm start` with mock system state (taskCount > 10): Confirm suggestion for taskPrioritizer.js in grok.log, yellow backendProposal log in LiveFeed.jsx.
+ *   - Check grok.log: Confirm validation logs (taskId, prompt, features) and suggestions (e.g., taskPrioritizer.js).
+ *   - Check ERROR_LOG.md: Confirm validation errors and enhancement suggestions.
+ * Rollback Instructions:
+ *   - Revert to selfEnhancer.js.bak (`mv backend/src/utils/selfEnhancer.js.bak backend/src/utils/selfEnhancer.js`).
+ *   - Verify /grok/edit works post-rollback, task validation logs appear in grok.log and ERROR_LOG.md.
  * Future Enhancements:
  *   - Integrate with systemAnalyzer.js for deeper system state analysis (Sprint 4).
  *   - Support automated implementation of suggestions via backend proposals (Sprint 5).
@@ -57,6 +61,7 @@
  *   - Nate: Triple-checked validation logic, suggestion logging, and Socket.IO integration (04/23/2025).
  *   - Nate: Added comprehensive notes for clarity, scalability, and alignment with Allur Space Console goals (04/23/2025).
  */
+
 const winston = require('winston');
 const path = require('path');
 const { getIO } = require('../socket');
@@ -88,6 +93,7 @@ async function selfValidateTask(taskId, prompt) {
       error: `Invalid taskId: ${taskId || 'missing'}`,
       logColor: 'red',
       timestamp: new Date().toISOString(),
+      eventId: uuidv4(),
       errorDetails: { reason: 'Invalid taskId', context: 'selfValidateTask' },
     });
     await appendLog(errorLogPath, `# Invalid Task ID\nTask ID: ${taskId || 'missing'}\nReason: Invalid UUID format`);
@@ -102,6 +108,7 @@ async function selfValidateTask(taskId, prompt) {
       error: 'Invalid or empty prompt',
       logColor: 'red',
       timestamp: new Date().toISOString(),
+      eventId: uuidv4(),
       errorDetails: { reason: 'Invalid prompt', context: 'selfValidateTask' },
     });
     await appendLog(errorLogPath, `# Invalid Prompt\nTask ID: ${taskId}\nPrompt: ${prompt || 'missing'}\nReason: Empty or invalid`);
@@ -111,7 +118,6 @@ async function selfValidateTask(taskId, prompt) {
   const lowerPrompt = prompt.toLowerCase();
   const features = lowerPrompt.match(/(login|dashboard|sponsor|employee|payroll|mfa|settings|authentication|security)/gi) || [];
 
-  // Check for duplicate features (e.g., multiple MFA requests)
   const featureSet = new Set(features);
   if (featureSet.size < features.length) {
     logger.warn(`Duplicate features detected`, { taskId, features });
@@ -121,13 +127,13 @@ async function selfValidateTask(taskId, prompt) {
       error: `Duplicate features detected: ${features.join(', ')}`,
       logColor: 'red',
       timestamp: new Date().toISOString(),
+      eventId: uuidv4(),
       errorDetails: { reason: 'Duplicate features', context: 'selfValidateTask', features },
     });
     await appendLog(errorLogPath, `# Duplicate Features\nTask ID: ${taskId}\nFeatures: ${features.join(', ')}\nPrompt: ${prompt}`);
     return false;
   }
 
-  // Mock system state check (replace with systemAnalyzer.js integration)
   const systemState = { existingFeatures: ['login'] };
   if (features.includes('mfa') && systemState.existingFeatures.includes('mfa')) {
     logger.warn(`MFA feature already exists`, { taskId });
@@ -137,6 +143,7 @@ async function selfValidateTask(taskId, prompt) {
       error: 'MFA feature already implemented',
       logColor: 'red',
       timestamp: new Date().toISOString(),
+      eventId: uuidv4(),
       errorDetails: { reason: 'Feature conflict', context: 'selfValidateTask', feature: 'mfa' },
     });
     await appendLog(errorLogPath, `# Feature Conflict\nTask ID: ${taskId}\nFeature: MFA\nPrompt: ${prompt}\nReason: Already implemented`);
@@ -150,6 +157,7 @@ async function selfValidateTask(taskId, prompt) {
     message: `Task validated successfully`,
     logColor: 'green',
     timestamp: new Date().toISOString(),
+    eventId: uuidv4(),
   });
   await appendLog(errorLogPath, `# Task Validated\nTask ID: ${taskId}\nPrompt: ${prompt}\nFeatures: ${features.join(', ')}`);
   return true;
@@ -157,7 +165,6 @@ async function selfValidateTask(taskId, prompt) {
 
 async function enhanceSelf(taskId, systemState) {
   const suggestions = [];
-  // Suggest taskPrioritizer.js if system has multiple tasks
   if (systemState.taskCount > 10) {
     suggestions.push({
       utility: 'taskPrioritizer.js',
@@ -169,7 +176,6 @@ async function enhanceSelf(taskId, systemState) {
   for (const suggestion of suggestions) {
     logger.info(`System enhancement suggested`, { taskId, suggestion });
     await appendLog(errorLogPath, `# System Enhancement\nTask ID: ${taskId}\nUtility: ${suggestion.utility}\nDescription: ${suggestion.description}\nReason: ${suggestion.reason}`);
-    // Mock backend proposal creation (integrate with taskManager.js)
     getIO().emit('backendProposal', {
       taskId,
       proposals: [{
@@ -179,6 +185,7 @@ async function enhanceSelf(taskId, systemState) {
         status: 'pending',
         taskId,
       }],
+      eventId: uuidv4(),
     });
   }
 
