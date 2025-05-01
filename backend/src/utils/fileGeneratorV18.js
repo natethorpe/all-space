@@ -15,6 +15,7 @@
  *   - taskDedupeUtils.js: Deduplication logic.
  *   - logUtils.js: MongoDB logging.
  *   - fileUtils.js: File operations and error logging.
+ *   - db.js: Provides getModel for MongoDB models.
  *   - fs.promises, path: File system operations.
  * Dependents:
  *   - taskManager.js: Calls generateFiles during task processing.
