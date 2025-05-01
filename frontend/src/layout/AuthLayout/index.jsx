@@ -1,3 +1,4 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\src\layout\AuthLayout\index.jsx
 import React from 'react';
 import { Layout, Row, Col } from 'antd';
 

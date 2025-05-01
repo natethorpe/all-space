@@ -1,0 +1,8 @@
+ /*// C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\src\pages\Calendar.css */ 
+.rbc-calendar-container {
+    /* Scope all react-big-calendar styles */
+  }
+.rbc-calendar-container .rbc-calendar {
+    min-height: 500px;
+  }
+/* Add more styles as needed from node_modules/react-big-calendar/lib/css/react-big-calendar.css */

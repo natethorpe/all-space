@@ -1,3 +1,4 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\models\coreModels\Settings.js
 const mongoose = require('mongoose');
 
 const settingSchema = new mongoose.Schema({

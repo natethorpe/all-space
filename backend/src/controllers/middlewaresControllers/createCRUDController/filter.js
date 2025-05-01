@@ -1,4 +1,6 @@
-const filter = async (Model, req, res) => {
+  // File Path: backend/src/controllers/middlewaresControllers/createCRUDController/filter.js
+
+  const filter = async (Model, req, res) => {
   if (req.query.filter === undefined || req.query.equal === undefined) {
     return res.status(403).json({
       success: false,

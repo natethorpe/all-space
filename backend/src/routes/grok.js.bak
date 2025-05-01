@@ -1,0 +1,841 @@
+/*
+ * File Path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\routes\grok.js
+ * Purpose: Allur Space Console router for admin-only task management, self-evolution, system enhancement, and backend proposal handling.
+ * How It Works: Defines REST endpoints to submit tasks, approve/reject changes, run tests, and manage proposals, with real-time Socket.IO updates.
+ * Dependencies: express (routing), mongoose (DB), playwright (testing), winston (logging), taskProcessorV18.js/taskTesterV18.js (logic), esprima (syntax), xai (AI), multer (file upload), jwt (auth).
+ * Dependents: Called by AllurSpaceConsole.jsx via apiClient, drives backend operations.
+ * Why It’s Here: Orchestrates task and proposal workflows, key to Sprint 2 and our autonomous system goal of building ecosystem projects (e.g., Allur Crypto).
+ * Key Info: /approve uses atomic transactions for consistency; admin-only with JWT auth—vital for reliability and security.
+ * Future Enhancements:
+ *   - Rate Limiting: Add middleware to prevent abuse (e.g., `express-rate-limit`).
+ *   - Audit Trail: Log all endpoint calls to a dedicated audit log for traceability.
+ * Change Log:
+ *   - 04/09/2025: Fixed manual Playwright and auth (Chat Line 9700-ish).
+ *   - 04/10/2025: Sprint 2 - Restored full endpoints, fixed /test, added rollback/delete (New Chat, Post-Sprint 2).
+ *   - 04/10/2025: Sprint 2 Completion - Made /approve atomic with transactions (Previous Chat).
+ *   - 04/10/2025: Made admin-only, fixed /test 500 with robust null checks (Previous Chat).
+ *   - 04/13/2025: Fixed /test 400 error, corrected syntax error (This Chat).
+ *     - Why: POST /test 400ed due to validation; syntax error ('Nieuwe regel') crashed server.
+ *     - How: Enhanced /test with taskId/status checks, fixed logger.info syntax.
+ *     - Test: Submit "Build CRM system", click Playwright test—expect 200, blue log, browser opens.
+ * Self-Notes:
+ *   - Nate: /test validates taskId/status, emits blue logs for manual tests (04/13/2025).
+ *   - Nate: Syntax error fixed, all endpoints preserved (04/13/2025).
+ *   - Nate: JWT auth, xAI, logging endpoints intact (04/13/2025).
+ */
+
+const express = require('express');
+const path = require('path');
+const mongoose = require('mongoose');
+const esprima = require('esprima');
+const { execSync } = require('child_process');
+const { chromium } = require('playwright');
+require('../db');
+const Task = mongoose.model('Task');
+const Memory = mongoose.model('Memory');
+const BackendProposal = mongoose.model('BackendProposal');
+const { v4: uuidv4 } = require('uuid');
+const { appendLog } = require('../utils/fileUtils');
+const { processTask, applyApprovedChanges, rollbackChanges, deleteTask } = require('../utils/taskProcessorV18');
+const { autoTestTask, manualTestTask } = require('../utils/taskTesterV18');
+const { xai } = require('@ai-sdk/xai');
+const multer = require('multer');
+const fs = require('fs').promises;
+const winston = require('winston');
+const upload = multer({ dest: 'uploads/' });
+const client = xai({ apiKey: process.env.XAI_API_KEY });
+const jwt = require('jsonwebtoken');
+
+const logger = winston.createLogger({
+  level: 'debug',
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+  transports: [
+    new winston.transports.File({ filename: path.join(__dirname, '../../../grok.log'), maxsize: 1024 * 1024 * 10 }),
+    new winston.transports.Console()
+  ]
+});
+
+module.exports = (io) => {
+  const router = express.Router();
+  logger.info('grok.js router executing');
+
+  const verifyToken = (req, res, next) => {
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (!token) {
+      logger.warn('No token provided', { path: req.path });
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    jwt.verify(token, process.env.JWT_SECRET || 'chelsiemygirl2025420isawsome', (err, decoded) => {
+      if (err) {
+        logger.error(`JWT verification failed: ${err.message}`, { token });
+        return res.status(403).json({ error: 'Invalid token', details: err.message });
+      }
+      req.user = decoded;
+      logger.info(`Token verified for user: ${decoded.email}`, { userId: decoded._id });
+      next();
+    });
+  };
+
+  router.use(verifyToken);
+
+  async function readLogs(logFile) {
+    try {
+      const content = await fs.readFile(logFile, 'utf8');
+      return content.split('\n').filter(line => line.trim()).map(line => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return { message: line, timestamp: new Date().toISOString() };
+        }
+      });
+    } catch (err) {
+      if (err.code === 'ENOENT') return [];
+      logger.error(`Failed to read log ${logFile}: ${err.message}`, { stack: err.stack });
+      return [];
+    }
+  }
+
+  router.get('/logs', async (req, res) => {
+    logger.info('Entering /api/grok/logs');
+    try {
+      const logs = {
+        error: await readLogs(path.join(__dirname, '../../../ERROR_LOG.md')),
+        debug: await readLogs(path.join(__dirname, '../../../DEBUG_LOG.md')),
+        feature: await readLogs(path.join(__dirname, '../../../FEATURE_LOG.md')),
+        connectivity: await readLogs(path.join(__dirname, '../../../CONNECTIVITY_LOG.md')),
+        grok: await readLogs(path.join(__dirname, '../../../grok.log'))
+      };
+      await Memory.create({ type: 'logs_access', data: { path: '/logs', timestamp: new Date() } });
+      io.emit('logUpdate', { event: 'logs_accessed', logs: Object.keys(logs), timestamp: new Date() });
+      res.json(logs);
+    } catch (err) {
+      logger.error(`Logs fetch error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Failed to fetch logs', details: err.message });
+    }
+  });
+
+  router.get('/tasks', async (req, res) => {
+    logger.info('Entering /api/grok/tasks');
+    try {
+      const errorLogs = await readLogs(path.join(__dirname, '../../../ERROR_LOG.md'));
+      const recentErrors = errorLogs.filter(log => 
+        log.message.includes('Tasks fetch error') && 
+        new Date() - new Date(log.timestamp) < 24 * 60 * 60 * 1000
+      );
+      if (recentErrors.length > 3) {
+        logger.warn('Recent task fetch errors detected', { count: recentErrors.length });
+        await appendLog(path.join(__dirname, '../../../CONNECTIVITY_LOG.md'), 
+          `# Task Fetch Issues\nTimestamp: ${new Date().toISOString()}\nErrors: ${recentErrors.length} in last 24h`);
+        res.set('X-Task-Warning', 'High error rate detected');
+      }
+      const tasks = await Task.find().lean();
+      const taskData = tasks.map(t => ({
+        taskId: t.taskId,
+        prompt: t.prompt,
+        status: t.status,
+        cadence: t.cadence,
+        priority: t.priority,
+        stagedFiles: t.stagedFiles || [],
+        generatedFiles: t.generatedFiles || [],
+        proposedChanges: t.proposedChanges || [],
+        originalContent: t.originalContent || {},
+        newContent: t.newContent || {},
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt
+      }));
+      io.emit('taskUpdate', { event: 'tasks_fetched', tasks: taskData, timestamp: new Date() });
+      res.json(taskData);
+    } catch (err) {
+      logger.error(`Tasks fetch error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Tasks fetch failed', details: err.message });
+    }
+  });
+
+  router.get('/files', async (req, res) => {
+    logger.info('Entering /api/grok/files');
+    const dir = path.join(__dirname, '../../../frontend/src/pages');
+    try {
+      const debugLogs = await readLogs(path.join(__dirname, '../../../DEBUG_LOG.md'));
+      const recentFileOps = debugLogs.filter(log => 
+        log.message.includes('Task queued') && 
+        new Date() - new Date(log.timestamp) < 7 * 24 * 60 * 60 * 1000
+      );
+      if (recentFileOps.length > 10) {
+        logger.info(`High file activity: ${recentFileOps.length} tasks in last 7 days`);
+        res.set('X-File-Activity', `High: ${recentFileOps.length} tasks`);
+      }
+      await fs.access(dir);
+      const files = await fs.readdir(dir);
+      const filteredFiles = files
+        .filter(file => /\.(jsx|js|css)$/.test(file))
+        .map(file => ({ path: `${dir}/${file}`, name: file }));
+      await Memory.create({ type: 'files_fetch', data: { count: filteredFiles.length, timestamp: new Date() } });
+      io.emit('fileUpdate', { event: 'files_fetched', files: filteredFiles, timestamp: new Date() });
+      res.json(filteredFiles);
+    } catch (err) {
+      logger.error(`File listing error: ${err.message}`, { dir, stack: err.stack });
+      res.status(500).json({ error: 'Failed to list files', details: err.message });
+    }
+  });
+
+  router.post('/analyze', async (req, res) => {
+    logger.info('Entering /api/grok/analyze');
+    try {
+      const { data } = req.body;
+      if (!data) return res.status(400).json({ error: 'No data provided' });
+      const response = await client.chat.completions.create({
+        model: 'grok-2-latest',
+        messages: [{ role: 'user', content: `Analyze this data: ${JSON.stringify(data)}` }],
+        maxTokens: 500,
+        stream: false,
+        temperature: 0
+      });
+      await Memory.create({ type: 'analyze', data: { input: data, result: response.choices[0].message.content } });
+      io.emit('analyzeUpdate', { data, result: response.choices[0].message.content, timestamp: new Date() });
+      res.json({ result: response.choices[0].message.content });
+    } catch (err) {
+      logger.error(`xAI API error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Failed to process request', details: err.message });
+    }
+  });
+
+  router.post('/upload', upload.single('file'), async (req, res) => {
+    logger.info('Entering /api/grok/upload');
+    try {
+      const fileContent = await fs.readFile(req.file.path, 'utf8');
+      const response = await client.chat.completions.create({
+        model: 'grok-2-latest',
+        messages: [{ role: 'user', content: `Analyze this file content: ${fileContent}` }],
+        maxTokens: 500,
+        stream: false,
+        temperature: 0
+      });
+      await Memory.create({ type: 'upload', data: { filename: req.file.originalname, result: response.choices[0].message.content } });
+      await fs.unlink(req.file.path);
+      io.emit('uploadUpdate', { filename: req.file.originalname, result: response.choices[0].message.content, timestamp: new Date() });
+      res.json({ result: response.choices[0].message.content });
+    } catch (err) {
+      logger.error(`File upload error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Failed to process file', details: err.message });
+    }
+  });
+
+  router.post('/edit', async (req, res) => {
+    logger.info('Entering /api/grok/edit');
+    const { prompt, file } = req.body;
+    logger.debug('Request body:', { prompt, file });
+
+    if (!prompt || typeof prompt !== 'string') {
+      logger.warn('Prompt missing or invalid in /edit request', { body: req.body });
+      return res.status(400).json({ error: 'Prompt required' });
+    }
+
+    const pendingTasks = await Task.find({ status: 'pending_approval' }).lean();
+    if (pendingTasks.length > 0) {
+      logger.info(`Pending tasks detected: ${pendingTasks.length}`, { pendingTaskIds: pendingTasks.map(t => t.taskId) });
+      return res.status(400).json({ 
+        error: 'Pending tasks exist', 
+        pendingTasks: pendingTasks.map(t => t.taskId)
+      });
+    }
+
+    try {
+      const task = new Task({
+        taskId: uuidv4(),
+        prompt,
+        file: file || null,
+        status: 'pending',
+        stagedFiles: [],
+        generatedFiles: [],
+        proposedChanges: [],
+        originalContent: {},
+        newContent: {},
+        createdAt: new Date(),
+      });
+      await task.save();
+      await Memory.create({ type: 'task_created', data: { taskId: task.taskId, prompt } });
+      await appendLog(path.join(__dirname, '../../../DEBUG_LOG.md'), 
+        `# New Task Queued\nTask ID: ${task.taskId}\nPrompt: ${prompt}\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('taskUpdate', { 
+        taskId: task.taskId, 
+        prompt, 
+        status: 'pending', 
+        logColor: 'default',
+        stagedFiles: task.stagedFiles,
+        generatedFiles: task.generatedFiles,
+        proposedChanges: task.proposedChanges,
+        timestamp: new Date().toISOString() 
+      });
+      processTask(task.taskId);
+      logger.info(`Task queued: ${task.taskId}`, { prompt });
+      res.json({ taskId: task.taskId, message: 'Task queued' });
+    } catch (err) {
+      logger.error(`Task creation error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Task creation failed', details: err.message });
+    }
+  });
+
+  router.post('/clear-tasks', async (req, res) => {
+    logger.info('Entering /api/grok/clear-tasks');
+    try {
+      await Task.deleteMany({});
+      await BackendProposal.deleteMany({});
+      await Memory.create({ type: 'tasks_cleared', data: { timestamp: new Date() } });
+      await appendLog(path.join(__dirname, '../../../DEBUG_LOG.md'), 
+        `# Tasks Cleared\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('taskUpdate', { 
+        event: 'tasks_cleared', 
+        logColor: 'default',
+        stagedFiles: [],
+        generatedFiles: [],
+        proposedChanges: [],
+        timestamp: new Date().toISOString() 
+      });
+      res.json({ message: 'All tasks and proposals cleared' });
+    } catch (err) {
+      logger.error(`Clear tasks error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Failed to clear tasks', details: err.message });
+    }
+  });
+
+  router.delete('/tasks/:taskId', async (req, res) => {
+    logger.info('Entering /api/grok/tasks/:taskId DELETE');
+    try {
+      const { taskId } = req.params;
+      await deleteTask(taskId);
+      await Memory.create({ type: 'task_deleted', data: { taskId, timestamp: new Date() } });
+      await appendLog(path.join(__dirname, '../../../DEBUG_LOG.md'), 
+        `# Task Deleted\nTask ID: ${taskId}\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('taskUpdate', { 
+        taskId, 
+        status: 'deleted', 
+        logColor: 'default',
+        stagedFiles: [],
+        generatedFiles: [],
+        proposedChanges: [],
+        timestamp: new Date().toISOString() 
+      });
+      res.json({ message: 'Task deleted' });
+    } catch (err) {
+      logger.error(`Delete task error: ${err.message}`, { taskId: req.params.taskId, stack: err.stack });
+      res.status(500).json({ error: 'Failed to delete task', details: err.message });
+    }
+  });
+
+  router.post('/approve', async (req, res) => {
+    logger.info('Entering /api/grok/approve');
+    const { taskId } = req.body;
+    logger.debug('Approve request body:', { taskId });
+    if (!taskId || typeof taskId !== 'string') {
+      logger.warn('Invalid taskId in /approve request', { body: req.body });
+      return res.status(400).json({ error: 'TaskId required' });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const task = await Task.findOne({ taskId }).session(session);
+      if (!task) {
+        await session.abortTransaction();
+        session.endSession();
+        logger.warn(`Task not found: ${taskId}`);
+        return res.status(404).json({ error: 'Task not found' });
+      }
+      if (task.status !== 'pending_approval') {
+        await session.abortTransaction();
+        session.endSession();
+        logger.warn(`Task not pending approval: ${taskId}`, { status: task.status });
+        return res.status(400).json({ error: 'Task not pending approval' });
+      }
+
+      await applyApprovedChanges(taskId, session);
+      await session.commitTransaction();
+      const updatedTask = await Task.findOne({ taskId });
+      io.emit('taskUpdate', { 
+        taskId, 
+        status: 'applied', 
+        logColor: 'green',
+        stagedFiles: updatedTask.stagedFiles || [],
+        generatedFiles: updatedTask.generatedFiles || [],
+        proposedChanges: updatedTask.proposedChanges || [],
+        message: 'Task approved and changes applied',
+        timestamp: new Date().toISOString() 
+      });
+      res.json({ message: 'Task approved and changes applied' });
+    } catch (err) {
+      await session.abortTransaction();
+      logger.error(`Task approval error: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'Approval failed', details: err.message });
+    } finally {
+      session.endSession();
+    }
+  });
+
+  router.post('/reject', async (req, res) => {
+    logger.info('Entering /api/grok/reject');
+    const { taskId, feedback } = req.body;
+    if (!taskId || typeof taskId !== 'string') {
+      logger.warn('Invalid taskId in /reject request', { body: req.body });
+      return res.status(400).json({ error: 'TaskId required' });
+    }
+
+    try {
+      const task = await Task.findOne({ taskId });
+      if (!task) {
+        logger.warn(`Task not found: ${taskId}`);
+        return res.status(404).json({ error: 'Task not found' });
+      }
+
+      await rollbackChanges(taskId);
+      let newTaskId = null;
+      if (feedback) {
+        const newTask = new Task({
+          taskId: uuidv4(),
+          prompt: `${task.prompt} - Revised with feedback: ${feedback}`,
+          file: task.file,
+          status: 'pending',
+          stagedFiles: [],
+          generatedFiles: [],
+          proposedChanges: [],
+          originalContent: {},
+          newContent: {},
+          createdAt: new Date(),
+        });
+        await newTask.save();
+        await Memory.create({ type: 'task_created_from_rejection', data: { taskId: newTask.taskId, prompt: newTask.prompt } });
+        io.emit('taskUpdate', { 
+          taskId: newTask.taskId, 
+          prompt: newTask.prompt, 
+          status: 'pending', 
+          logColor: 'default',
+          stagedFiles: newTask.stagedFiles,
+          generatedFiles: newTask.generatedFiles,
+          proposedChanges: newTask.proposedChanges,
+          timestamp: new Date().toISOString() 
+        });
+        processTask(newTask.taskId);
+        newTaskId = newTask.taskId;
+      }
+      io.emit('taskUpdate', { 
+        taskId, 
+        status: 'denied', 
+        logColor: 'red',
+        feedback, 
+        stagedFiles: task.stagedFiles || [],
+        generatedFiles: task.generatedFiles || [],
+        proposedChanges: task.proposedChanges || [],
+        timestamp: new Date().toISOString() 
+      });
+      res.json({ message: 'Task denied and changes rolled back', newTaskId });
+    } catch (err) {
+      logger.error(`Task rejection error: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'Rejection failed', details: err.message });
+    }
+  });
+
+  router.post('/test', async (req, res) => {
+    logger.info('Entering /api/grok/test');
+    const { taskId, manual } = req.body;
+    logger.debug('Test request body:', { taskId, manual });
+    if (!taskId || typeof taskId !== 'string') {
+      logger.warn('Invalid taskId in /test request', { body: req.body });
+      return res.status(400).json({ error: 'TaskId required' });
+    }
+
+    try {
+      const task = await Task.findOne({ taskId });
+      if (!task) {
+        logger.warn(`Task not found: ${taskId}`);
+        return res.status(404).json({ error: 'Task not found' });
+      }
+
+      logger.debug(`Task data before test:`, { 
+        taskId, 
+        stagedFiles: task.stagedFiles, 
+        generatedFiles: task.generatedFiles, 
+        status: task.status 
+      });
+
+      const stagedFiles = Array.isArray(task.stagedFiles) ? task.stagedFiles : [];
+      const generatedFiles = Array.isArray(task.generatedFiles) ? task.generatedFiles : [];
+
+      if (manual && task.status !== 'pending_approval') {
+        logger.warn(`Manual test requires pending_approval`, { taskId, status: task.status });
+        return res.status(400).json({ error: `Manual test requires pending_approval, current status: ${task.status}` });
+      }
+
+      if (stagedFiles.length === 0 && generatedFiles.length === 0) {
+        logger.warn(`No files available to test for task ${taskId}`, { stagedFiles, generatedFiles });
+        return res.status(400).json({ error: 'No files to test', stagedFiles, generatedFiles });
+      }
+
+      if (manual) {
+        await manualTestTask(taskId);
+        io.emit('taskUpdate', { 
+          taskId, 
+          status: 'testing', 
+          manual: true, 
+          logColor: 'blue',
+          stagedFiles, 
+          generatedFiles,
+          proposedChanges: task.proposedChanges || [],
+          message: 'Manual Playwright test launched',
+          timestamp: new Date().toISOString() 
+        });
+        res.json({ message: 'Manual Playwright test launched', stagedFiles, generatedFiles });
+      } else {
+        await autoTestTask(taskId);
+        const updatedTask = await Task.findOne({ taskId });
+        io.emit('taskUpdate', { 
+          taskId, 
+          status: updatedTask.status, 
+          manual: false, 
+          logColor: updatedTask.status === 'tested' ? 'green' : 'red',
+          stagedFiles: updatedTask.stagedFiles || [],
+          generatedFiles: updatedTask.generatedFiles || [],
+          proposedChanges: updatedTask.proposedChanges || [],
+          message: 'Auto Playwright test completed',
+          timestamp: new Date().toISOString() 
+        });
+        res.json({ message: 'Auto Playwright test completed', taskStatus: updatedTask.status });
+      }
+    } catch (err) {
+      logger.error(`Test error: ${err.message}`, { taskId, stack: err.stack });
+      io.emit('taskUpdate', { 
+        taskId, 
+        status: 'failed', 
+        error: `Test failed: ${err.message}`, 
+        logColor: 'red',
+        timestamp: new Date().toISOString() 
+      });
+      res.status(500).json({ error: 'Test failed', details: err.message });
+    }
+  });
+
+  router.post('/self-test', async (req, res) => {
+    logger.info('Entering /api/grok/self-test');
+    try {
+      const testTask = new Task({
+        taskId: uuidv4(),
+        prompt: 'Self-test Allur Space Console functionality',
+        status: 'pending',
+        stagedFiles: [],
+        generatedFiles: [],
+        proposedChanges: [],
+        originalContent: {},
+        newContent: {},
+        createdAt: new Date(),
+      });
+      await testTask.save();
+      await processTask(testTask.taskId);
+      await autoTestTask(testTask.taskId);
+      const memory = await Memory.findOne({ taskId: testTask.taskId });
+      io.emit('selfTestUpdate', { 
+        taskId: testTask.taskId, 
+        result: memory?.outcome || 'pending', 
+        logColor: memory?.outcome === 'success' ? 'green' : 'red',
+        stagedFiles: testTask.stagedFiles,
+        generatedFiles: testTask.generatedFiles,
+        proposedChanges: testTask.proposedChanges,
+        timestamp: new Date().toISOString() 
+      });
+      res.json({ message: 'Self-test initiated', taskId: testTask.taskId });
+    } catch (err) {
+      logger.error(`Self-test error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Self-test failed', details: err.message });
+    }
+  });
+
+  router.post('/self-enhance', async (req, res) => {
+    logger.info('Entering /api/grok/self-enhance');
+    try {
+      const recentFailures = await Memory.find({ outcome: 'failure' })
+        .sort({ timestamp: -1 })
+        .limit(5)
+        .lean();
+
+      const analysis = await require('../utils/taskProcessorV18').analyzeSystem();
+      const proposal = new BackendProposal({
+        file: 'grok.js',
+        change: 'Implement suggested enhancement based on system analysis',
+        content: `// Enhanced logic from analysis: ${JSON.stringify(analysis.improvementOpportunities.slice(0, 1))}`,
+        reason: 'Auto-enhancement based on system analysis and recent failures',
+        status: 'pending',
+        taskId: uuidv4(),
+        createdAt: new Date()
+      });
+      await proposal.save();
+
+      io.emit('backendProposal', { 
+        taskId: proposal.taskId, 
+        proposals: [proposal.toObject()],
+        logColor: 'yellow',
+        stagedFiles: [],
+        generatedFiles: [],
+        proposedChanges: [proposal.toObject()],
+        timestamp: new Date().toISOString()
+      });
+      res.json({ message: 'Enhancement proposal generated', proposalId: proposal._id });
+    } catch (err) {
+      logger.error(`Self-enhance error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Self-enhance failed', details: err.message });
+    }
+  });
+
+  router.post('/update-priority', async (req, res) => {
+    logger.info('Entering /api/grok/update-priority');
+    const { taskId, priority } = req.body;
+    if (!taskId || typeof taskId !== 'string' || priority === undefined) {
+      logger.warn('Invalid request in /update-priority', { body: req.body });
+      return res.status(400).json({ error: 'TaskId and priority required' });
+    }
+
+    try {
+      const task = await Task.findOneAndUpdate({ taskId }, { priority }, { new: true });
+      if (!task) {
+        logger.warn(`Task not found: ${taskId}`);
+        return res.status(404).json({ error: 'Task not found' });
+      }
+      await Memory.create({ type: 'priority_updated', data: { taskId, priority } });
+      await appendLog(path.join(__dirname, '../../../DEBUG_LOG.md'), 
+        `# Priority Updated\nTask ID: ${taskId}\nNew Priority: ${priority}\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('taskUpdate', { 
+        taskId, 
+        priority, 
+        logColor: 'default',
+        stagedFiles: task.stagedFiles || [],
+        generatedFiles: task.generatedFiles || [],
+        proposedChanges: task.proposedChanges || [],
+        timestamp: new Date().toISOString() 
+      });
+      res.json({ message: 'Priority updated', task });
+    } catch (err) {
+      logger.error(`Priority update error: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'Failed to update priority', details: err.message });
+    }
+  });
+
+  router.post('/maintenance', async (req, res) => {
+    logger.info('Entering /api/grok/maintenance');
+    const { taskId, action, report } = req.body;
+    if (!taskId || typeof taskId !== 'string' || !action || !report) {
+      logger.warn('Invalid request in /maintenance', { body: req.body });
+      return res.status(400).json({ error: 'TaskId, action, and report required' });
+    }
+
+    try {
+      const task = await Task.findOne({ taskId });
+      if (!task) {
+        logger.warn(`Task not found: ${taskId}`);
+        return res.status(404).json({ error: 'Task not found' });
+      }
+
+      if (action === 'approve') {
+        for (const proposal of report.proposals || []) {
+          if (proposal.type === 'merge_logs') {
+            const merged = await Promise.all(proposal.files.map(f => fs.readFile(f, 'utf8')));
+            await fs.writeFile('grok.log', merged.join('\n'), 'utf8');
+            await Promise.all(proposal.files.filter(f => f !== 'grok.log').map(f => fs.unlink(f)));
+            await Memory.create({ type: 'logs_merged', data: { taskId, files: proposal.files } });
+          }
+        }
+        task.maintenanceReport = { ...task.maintenanceReport, status: 'approved' };
+        await task.save();
+        io.emit('maintenanceUpdate', { 
+          taskId, 
+          status: 'approved', 
+          logColor: 'green',
+          report, 
+          stagedFiles: task.stagedFiles || [],
+          generatedFiles: task.generatedFiles || [],
+          proposedChanges: task.proposedChanges || [],
+          timestamp: new Date().toISOString() 
+        });
+        res.json({ success: true, message: 'Maintenance approved' });
+      } else if (action === 'reject') {
+        task.maintenanceReport = { ...task.maintenanceReport, status: 'rejected' };
+        await task.save();
+        await Memory.create({ type: 'maintenance_rejected', data: { taskId, report } });
+        io.emit('maintenanceUpdate', { 
+          taskId, 
+          status: 'rejected', 
+          logColor: 'red',
+          report, 
+          stagedFiles: task.stagedFiles || [],
+          generatedFiles: task.generatedFiles || [],
+          proposedChanges: task.proposedChanges || [],
+          timestamp: new Date().toISOString() 
+        });
+        res.json({ success: true, message: 'Maintenance rejected' });
+      } else {
+        logger.warn('Invalid maintenance action', { action });
+        return res.status(400).json({ error: 'Invalid action' });
+      }
+    } catch (err) {
+      logger.error(`Maintenance action failed: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'Maintenance action failed', details: err.message });
+    }
+  });
+
+  router.get('/file-content', async (req, res) => {
+    logger.info('Entering /api/grok/file-content');
+    const { taskId } = req.query;
+    if (!taskId || typeof taskId !== 'string') {
+      logger.warn('Invalid taskId in /file-content request', { query: req.query });
+      return res.status(400).json({ error: 'TaskId required' });
+    }
+
+    try {
+      const task = await Task.findOne({ taskId });
+      if (!task) {
+        logger.warn(`Task not found: ${taskId}`);
+        return res.status(404).json({ error: 'Task not found' });
+      }
+      logger.debug(`Fetched task content for ${taskId}`, { 
+        originalContent: task.originalContent, 
+        newContent: task.newContent, 
+        stagedFiles: task.stagedFiles, 
+        generatedFiles: task.generatedFiles 
+      });
+      io.emit('fileContentUpdate', { 
+        taskId, 
+        originalContent: task.originalContent || {},
+        newContent: task.newContent || {},
+        logColor: 'default',
+        stagedFiles: task.stagedFiles || [],
+        generatedFiles: task.generatedFiles || [],
+        proposedChanges: task.proposedChanges || [],
+        timestamp: new Date().toISOString() 
+      });
+      res.json({ 
+        originalContent: task.originalContent || {},
+        newContent: task.newContent || {},
+        stagedFiles: task.stagedFiles || [],
+        generatedFiles: task.generatedFiles || [],
+        proposedChanges: task.proposedChanges || []
+      });
+    } catch (err) {
+      logger.error(`File content fetch error: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'File content fetch failed', details: err.message });
+    }
+  });
+
+  router.post('/delete-task', async (req, res) => {
+    logger.info('Entering /api/grok/delete-task');
+    const { taskId } = req.body;
+    if (!taskId || typeof taskId !== 'string') {
+      logger.warn('Invalid taskId in /delete-task request', { body: req.body });
+      return res.status(400).json({ error: 'TaskId required' });
+    }
+
+    try {
+      await deleteTask(taskId);
+      io.emit('taskUpdate', { 
+        taskId, 
+        status: 'deleted', 
+        logColor: 'default',
+        stagedFiles: [],
+        generatedFiles: [],
+        proposedChanges: [],
+        timestamp: new Date().toISOString() 
+      });
+      res.json({ message: 'Task deleted' });
+    } catch (err) {
+      logger.error(`Delete task error: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'Delete failed', details: err.message });
+    }
+  });
+
+  router.get('/backend-proposals', async (req, res) => {
+    logger.info('Entering /api/grok/backend-proposals');
+    try {
+      const proposals = await BackendProposal.find().lean();
+      logger.info(`Fetched ${proposals.length} backend proposals`, { proposalIds: proposals.map(p => p._id) });
+      res.json(proposals);
+    } catch (err) {
+      logger.error(`Backend proposals fetch error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Failed to fetch backend proposals', details: err.message });
+    }
+  });
+
+  router.post('/approve-backend', async (req, res) => {
+    logger.info('Entering /api/grok/approve-backend');
+    const { proposalId } = req.body;
+    if (!proposalId || !mongoose.Types.ObjectId.isValid(proposalId)) {
+      logger.warn('Invalid proposalId in /approve-backend request', { body: req.body });
+      return res.status(400).json({ error: 'Invalid proposalId' });
+    }
+
+    try {
+      const proposal = await BackendProposal.findById(proposalId);
+      if (!proposal) {
+        logger.warn(`Proposal not found: ${proposalId}`);
+        return res.status(404).json({ error: 'Proposal not found' });
+      }
+      if (proposal.status !== 'pending') {
+        logger.warn(`Proposal not pending: ${proposalId}`, { status: proposal.status });
+        return res.status(400).json({ error: 'Proposal not pending' });
+      }
+
+      const filePath = path.join(__dirname, proposal.file === 'grok.js' ? '' : '..', proposal.file);
+      const originalContent = await fs.readFile(filePath, 'utf8');
+      const backupPath = `${filePath}.bak.${Date.now()}`;
+      await fs.writeFile(backupPath, originalContent, 'utf8');
+      await fs.writeFile(filePath, proposal.content || proposal.change, 'utf8');
+
+      proposal.status = 'approved';
+      proposal.appliedAt = new Date();
+      await proposal.save();
+
+      io.emit('backendProposalUpdate', { 
+        proposalId, 
+        status: 'approved', 
+        logColor: 'green',
+        stagedFiles: [],
+        generatedFiles: [],
+        proposedChanges: [proposal.toObject()],
+        timestamp: new Date().toISOString()
+      });
+      res.json({ message: 'Backend enhancement applied', backup: backupPath });
+    } catch (err) {
+      logger.error(`Backend approval error: ${err.message}`, { proposalId, stack: err.stack });
+      res.status(500).json({ error: 'Approval failed', details: err.message });
+    }
+  });
+
+  router.post('/rollback', async (req, res) => {
+    logger.info('Entering /api/grok/rollback');
+    const { proposalId } = req.body;
+    if (!proposalId || !mongoose.Types.ObjectId.isValid(proposalId)) {
+      logger.warn('Invalid proposalId in /rollback request', { body: req.body });
+      return res.status(400).json({ error: 'Invalid proposalId' });
+    }
+
+    try {
+      const proposal = await BackendProposal.findById(proposalId);
+      if (!proposal) {
+        logger.warn(`Proposal not found: ${proposalId}`);
+        return res.status(404).json({ error: 'Proposal not found' });
+      }
+
+      proposal.status = 'denied';
+      await proposal.save();
+      io.emit('backendProposalUpdate', { 
+        proposalId, 
+        status: 'denied', 
+        logColor: 'red',
+        stagedFiles: [],
+        generatedFiles: [],
+        proposedChanges: [proposal.toObject()],
+        timestamp: new Date().toISOString()
+      });
+      res.json({ message: 'Enhancement rolled back' });
+    } catch (err) {
+      logger.error(`Rollback error: ${err.message}`, { proposalId, stack: err.stack });
+      res.status(500).json({ error: 'Rollback failed', details: err.message });
+    }
+  });
+
+  logger.info('/api/grok mounted successfully');
+  return router;
+};

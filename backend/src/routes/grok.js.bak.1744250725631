@@ -1,0 +1,724 @@
+/*
+ * File Path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\routes\grok.js
+ * Purpose: Allur Space Console router for task management, self-evolution, system enhancement, and backend proposal handling.
+ * Change Log:
+ *   - 04/09/2025: Fixed manual Playwright and auth (Chat Line 9700-ish).
+ *   - 04/09/2025: Fixed 400 error on approve-backend (Chat Line 9800-ish).
+ *   - 04/09/2025: Enhanced /file-content to log and return content (Chat Line 10400-ish).
+ *   - 04/09/2025: Sprint 1 - Enhanced /approve-backend for safe application (New Chat, Sprint 1).
+ *   - 04/09/2025: Fixed 500 errors on /approve-backend (New Chat, Post-Sprint 1).
+ *   - 04/09/2025: Fixed 400 error due to incorrect file path (New Chat, Post-Sprint 1 Fix 2).
+ *   - 04/09/2025: Fixed 400 error due to syntax failure (New Chat, Post-Sprint 1 Fix 3).
+ *   - 04/09/2025: Hardened code injection for syntax reliability (New Chat, Post-Sprint 1 Fix 4).
+ *   - 04/09/2025: Fixed persistent syntax error with isolated append (New Chat, Post-Sprint 1 Fix 5).
+ *   - 04/09/2025: Fixed syntax error with clean append and validation (New Chat, Post-Sprint 1 Fix 6).
+ *   - 04/09/2025: Fixed mixed ENOENT and syntax errors (New Chat, Post-Sprint 1 Fix 7).
+ *   - 04/09/2025: Fixed startup SyntaxError in /logs endpoint (New Chat, Post-Sprint 1 Fix 8).
+ *   - 04/09/2025: Fixed 500/400 errors with enhanced logging (New Chat, Post-Sprint 1 Fix 9).
+ *   - 04/09/2025: Fixed 500 exec path and 400 syntax with deeper logging (New Chat, Post-Sprint 1 Fix 10).
+ *   - 04/09/2025: Fixed 500 EADDRINUSE and 400 esprima quirk (New Chat, Post-Sprint 1 Fix 11).
+ *     - Why: 500 (EADDRINUSE from exec) and 400 (syntax at line 62) on /approve-backend (User logs, 23:28 UTC, 04/09/2025).
+ *     - How: Removed server restart, used node -c for validation, added line 62 context logging.
+ *     - Test: Approve IDs 67f70280cc14aee0c6150158 (db.js) and 67f70280cc14aee0c6150159 (grok.js).
+ * Self-Notes:
+ *   - Nate: Verify no 500/400 errors post-approval.
+ *   - Nate: Check grok.log for line 62 context if 400 persists.
+ *   - Nate: Sync frontend to AllurSpaceConsole.jsx after this.
+ */
+
+const express = require('express');
+const path = require('path');
+const mongoose = require('mongoose');
+const esprima = require('esprima');
+const { execSync } = require('child_process');
+require('../db');
+const Task = mongoose.model('Task');
+const Memory = mongoose.model('Memory');
+const BackendProposal = mongoose.model('BackendProposal');
+const { v4: uuidv4 } = require('uuid');
+const { appendLog } = require('../utils/fileUtils');
+const { processTask } = require('../utils/taskProcessorV18');
+const { autoTestTask } = require('../utils/taskTesterV18');
+const { xai } = require('@ai-sdk/xai');
+const multer = require('multer');
+const fs = require('fs').promises;
+const winston = require('winston');
+const upload = multer({ dest: 'uploads/' });
+const client = xai({ apiKey: process.env.XAI_API_KEY });
+const jwt = require('jsonwebtoken');
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+  transports: [
+    new winston.transports.File({ filename: path.join(__dirname, '../../../grok.log'), maxsize: 1024 * 1024 * 10 }),
+    new winston.transports.Console()
+  ]
+});
+
+module.exports = (io) => {
+  const router = express.Router();
+
+  const verifyToken = (req, res, next) => {
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'No token provided' });
+    jwt.verify(token, process.env.JWT_SECRET || 'chelsiemygirl2025420isawsome', (err, decoded) => {
+      if (err) {
+        logger.error(`JWT verification failed: ${err.message}`, { token });
+        return res.status(403).json({ error: 'Invalid token', details: err.message });
+      }
+      req.user = decoded;
+      logger.info(`Token verified for user: ${decoded.email}`, { userId: decoded._id });
+      next();
+    });
+  };
+
+  router.use(verifyToken);
+
+  async function readLogs(logFile) {
+    try {
+      const content = await fs.readFile(logFile, 'utf8');
+      return content.split('\n').filter(line => line.trim()).map(line => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return { message: line, timestamp: new Date().toISOString() };
+        }
+      });
+    } catch (err) {
+      if (err.code === 'ENOENT') return [];
+      logger.error(`Failed to read log ${logFile}: ${err.message}`, { stack: err.stack });
+      return [];
+    }
+  }
+
+  router.get('/logs', async (req, res) => {
+    logger.info('Entering /api/grok/logs');
+    try {
+      const logs = {
+        error: await readLogs(path.join(__dirname, '../../../ERROR_LOG.md')),
+        debug: await readLogs(path.join(__dirname, '../../../DEBUG_LOG.md')),
+        feature: await readLogs(path.join(__dirname, '../../../FEATURE_LOG.md')),
+        connectivity: await readLogs(path.join(__dirname, '../../../CONNECTIVITY_LOG.md')),
+        grok: await readLogs(path.join(__dirname, '../../../grok.log'))
+      };
+      await Memory.create({ type: 'logs_access', data: { path: '/logs', timestamp: new Date() } });
+      io.emit('logUpdate', { event: 'logs_accessed', logs: Object.keys(logs), timestamp: new Date() });
+      res.json(logs);
+    } catch (err) {
+      logger.error(`Logs fetch error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Failed to fetch logs', details: err.message });
+    }
+  });
+
+  router.get('/tasks', async (req, res) => {
+    logger.info('Entering /api/grok/tasks');
+    try {
+      const errorLogs = await readLogs(path.join(__dirname, '../../../ERROR_LOG.md'));
+      const recentErrors = errorLogs.filter(log => 
+        log.message.includes('Tasks fetch error') && 
+        new Date() - new Date(log.timestamp) < 24 * 60 * 60 * 1000
+      );
+      if (recentErrors.length > 3) {
+        logger.warn('Recent task fetch errors detected', { count: recentErrors.length });
+        await appendLog(path.join(__dirname, '../../../CONNECTIVITY_LOG.md'), 
+          `# Task Fetch Issues\nTimestamp: ${new Date().toISOString()}\nErrors: ${recentErrors.length} in last 24h`);
+        res.set('X-Task-Warning', 'High error rate detected');
+      }
+      const tasks = await Task.find().lean();
+      await Memory.create({ type: 'tasks_fetch', data: { count: tasks.length, timestamp: new Date() } });
+      const taskData = tasks.map(t => ({
+        taskId: t.taskId,
+        prompt: t.prompt,
+        status: t.status,
+        cadence: t.cadence,
+        priority: t.priority,
+        generatedFiles: t.generatedFiles,
+      }));
+      io.emit('taskUpdate', { event: 'tasks_fetched', tasks: taskData, timestamp: new Date() });
+      res.json(taskData);
+    } catch (err) {
+      logger.error(`Tasks fetch error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Tasks fetch failed', details: err.message });
+    }
+  });
+
+  router.get('/files', async (req, res) => {
+    logger.info('Entering /api/grok/files');
+    const dir = path.join(__dirname, '../../../frontend/src/pages');
+    try {
+      const debugLogs = await readLogs(path.join(__dirname, '../../../DEBUG_LOG.md'));
+      const recentFileOps = debugLogs.filter(log => 
+        log.message.includes('Task queued') && 
+        new Date() - new Date(log.timestamp) < 7 * 24 * 60 * 60 * 1000
+      );
+      if (recentFileOps.length > 10) {
+        logger.info(`High file activity: ${recentFileOps.length} tasks in last 7 days`);
+        res.set('X-File-Activity', `High: ${recentFileOps.length} tasks`);
+      }
+      await fs.access(dir);
+      const files = await fs.readdir(dir);
+      const filteredFiles = files
+        .filter(file => /\.(jsx|js|css)$/.test(file))
+        .map(file => ({ path: `${dir}/${file}`, name: file }));
+      await Memory.create({ type: 'files_fetch', data: { count: filteredFiles.length, timestamp: new Date() } });
+      io.emit('fileUpdate', { event: 'files_fetched', files: filteredFiles, timestamp: new Date() });
+      res.json(filteredFiles);
+    } catch (err) {
+      logger.error(`File listing error: ${err.message}`, { dir, stack: err.stack });
+      res.status(500).json({ error: 'Failed to list files', details: err.message });
+    }
+  });
+
+  router.post('/analyze', async (req, res) => {
+    logger.info('Entering /api/grok/analyze');
+    try {
+      const { data } = req.body;
+      if (!data) return res.status(400).json({ error: 'No data provided' });
+      const response = await client.chat.completions.create({
+        model: 'grok-2-latest',
+        messages: [{ role: 'user', content: `Analyze this data: ${JSON.stringify(data)}` }],
+        maxTokens: 500,
+        stream: false,
+        temperature: 0
+      });
+      await Memory.create({ type: 'analyze', data: { input: data, result: response.choices[0].message.content } });
+      io.emit('analyzeUpdate', { data, result: response.choices[0].message.content, timestamp: new Date() });
+      res.json({ result: response.choices[0].message.content });
+    } catch (error) {
+      logger.error(`xAI API error: ${error.message}`, { stack: error.stack });
+      res.status(500).json({ error: 'Failed to process request', details: error.message });
+    }
+  });
+
+  router.post('/upload', upload.single('file'), async (req, res) => {
+    logger.info('Entering /api/grok/upload');
+    try {
+      const fileContent = await fs.readFile(req.file.path, 'utf8');
+      const response = await client.chat.completions.create({
+        model: 'grok-2-latest',
+        messages: [{ role: 'user', content: `Analyze this file content: ${fileContent}` }],
+        maxTokens: 500,
+        stream: false,
+        temperature: 0
+      });
+      await Memory.create({ type: 'upload', data: { filename: req.file.originalname, result: response.choices[0].message.content } });
+      await fs.unlink(req.file.path);
+      io.emit('uploadUpdate', { filename: req.file.originalname, result: response.choices[0].message.content, timestamp: new Date() });
+      res.json({ result: response.choices[0].message.content });
+    } catch (error) {
+      logger.error(`File upload error: ${error.message}`, { stack: error.stack });
+      res.status(500).json({ error: 'Failed to process file', details: error.message });
+    }
+  });
+
+  router.post('/edit', async (req, res) => {
+    logger.info('Entering /api/grok/edit');
+    const { prompt, file } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'Prompt required' });
+    try {
+      const task = new Task({
+        taskId: uuidv4(),
+        prompt,
+        file: file || null,
+        status: 'pending',
+        createdAt: new Date(),
+      });
+      await task.save();
+      await Memory.create({ type: 'task_created', data: { taskId: task.taskId, prompt } });
+      await appendLog(path.join(__dirname, '../../../DEBUG_LOG.md'), 
+        `# New Task Queued\nTask ID: ${task.taskId}\nPrompt: ${prompt}\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('taskUpdate', { taskId: task.taskId, prompt, status: 'pending', timestamp: new Date() });
+      processTask(task.taskId).then(() => autoTestTask(task.taskId));
+      res.json({ taskId: task.taskId, message: 'Task queued' });
+    } catch (err) {
+      logger.error(`Task creation error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Task creation failed', details: err.message });
+    }
+  });
+
+  router.post('/clear-tasks', async (req, res) => {
+    logger.info('Entering /api/grok/clear-tasks');
+    try {
+      await Task.deleteMany({});
+      await Memory.create({ type: 'tasks_cleared', data: { timestamp: new Date() } });
+      await appendLog(path.join(__dirname, '../../../DEBUG_LOG.md'), 
+        `# Tasks Cleared\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('taskUpdate', { event: 'tasks_cleared', timestamp: new Date() });
+      res.json({ message: 'All tasks cleared' });
+    } catch (err) {
+      logger.error(`Clear tasks error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Failed to clear tasks', details: err.message });
+    }
+  });
+
+  router.delete('/tasks/:taskId', async (req, res) => {
+    logger.info('Entering /api/grok/tasks/:taskId DELETE');
+    try {
+      const { taskId } = req.params;
+      await Task.deleteOne({ taskId });
+      await Memory.create({ type: 'task_deleted', data: { taskId, timestamp: new Date() } });
+      await appendLog(path.join(__dirname, '../../../DEBUG_LOG.md'), 
+        `# Task Deleted\nTask ID: ${taskId}\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('taskUpdate', { taskId, status: 'deleted', timestamp: new Date() });
+      res.json({ message: 'Task deleted' });
+    } catch (err) {
+      logger.error(`Delete task error: ${err.message}`, { taskId: req.params.taskId, stack: err.stack });
+      res.status(500).json({ error: 'Failed to delete task', details: err.message });
+    }
+  });
+
+  router.get('/file-content', async (req, res) => {
+    logger.info('Entering /api/grok/file-content');
+    const { taskId } = req.query;
+    try {
+      const task = await Task.findOne({ taskId });
+      if (!task) return res.status(404).json({ error: 'Task not found' });
+      logger.debug(`Fetched task content for ${taskId}`, { originalContent: task.originalContent, newContent: task.newContent, generatedFiles: task.generatedFiles });
+      io.emit('fileContentUpdate', { 
+        taskId, 
+        originalContent: task.originalContent, 
+        newContent: task.newContent, 
+        generatedFiles: task.generatedFiles, 
+        timestamp: new Date() 
+      });
+      res.json({ originalContent: task.originalContent, newContent: task.newContent, generatedFiles: task.generatedFiles });
+    } catch (err) {
+      logger.error(`File content fetch error: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'File content fetch failed', details: err.message });
+    }
+  });
+
+  router.post('/approve', async (req, res) => {
+    logger.info('Entering /api/grok/approve');
+    const { taskId } = req.body;
+    try {
+      const task = await Task.findOne({ taskId });
+      if (!task || task.status !== 'completed') return res.status(400).json({ error: 'Invalid task' });
+      for (const file of task.generatedFiles) {
+        await fs.writeFile(file, await fs.readFile(file, 'utf8')); // Persist generated files
+      }
+      task.status = 'applied';
+      await task.save();
+      await Memory.create({ type: 'task_approved', data: { taskId, files: task.generatedFiles } });
+      await appendLog(path.join(__dirname, '../../../FEATURE_LOG.md'), 
+        `# Task Approved\nTask ID: ${taskId}\nFiles: ${task.generatedFiles.join(', ')}\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('taskUpdate', { taskId, status: 'applied', files: task.generatedFiles, timestamp: new Date() });
+      res.json({ message: 'Changes applied' });
+    } catch (err) {
+      logger.error(`Approval error: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'Approval failed', details: err.message });
+    }
+  });
+
+  router.post('/reject', async (req, res) => {
+    logger.info('Entering /api/grok/reject');
+    const { taskId, feedback } = req.body;
+    try {
+      const task = await Task.findOne({ taskId });
+      if (!task) return res.status(404).json({ error: 'Task not found' });
+      task.status = 'rejected';
+      task.feedback = feedback;
+      await task.save();
+      await Memory.create({ type: 'task_rejected', data: { taskId, feedback } });
+      await appendLog(path.join(__dirname, '../../../DEBUG_LOG.md'), 
+        `# Task Rejected\nTask ID: ${taskId}\nFeedback: ${feedback || 'None'}\nTimestamp: ${new Date().toISOString()}`);
+      let newTaskId = null;
+      if (feedback) {
+        const newTask = new Task({
+          taskId: uuidv4(),
+          prompt: `${task.prompt} - Revised with feedback: ${feedback}`,
+          file: task.file,
+          status: 'pending',
+          createdAt: new Date(),
+        });
+        await newTask.save();
+        await Memory.create({ type: 'task_created_from_rejection', data: { taskId: newTask.taskId, prompt: newTask.prompt } });
+        io.emit('taskUpdate', { taskId: newTask.taskId, prompt: newTask.prompt, status: 'pending', timestamp: new Date() });
+        processTask(newTask.taskId);
+        newTaskId = newTask.taskId;
+      }
+      io.emit('taskUpdate', { taskId, status: 'rejected', feedback, timestamp: new Date() });
+      res.json({ message: 'Task rejected', newTaskId });
+    } catch (err) {
+      logger.error(`Rejection error: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'Rejection failed', details: err.message });
+    }
+  });
+
+  router.post('/test', async (req, res) => {
+    logger.info('Entering /api/grok/test');
+    const { taskId, manual } = req.body;
+    try {
+      const task = await Task.findOne({ taskId });
+      if (!task || !task.generatedFiles.length) return res.status(400).json({ error: 'No files to test' });
+
+      if (manual) {
+        const mainFile = task.generatedFiles[0];
+        const fileName = path.basename(mainFile);
+        const testScript = `
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({ headless: false });
+            const context = await browser.newContext();
+            const page = await context.newPage();
+            await page.goto('http://localhost:3000/employee-log');
+            await page.fill('#email', 'admin@idurarapp.com');
+            await page.fill('#password', 'admin123');
+            await page.click('#login-button');
+            console.log('Browser open for manual review. Close when done.');
+          })();
+        `;
+        const testFile = path.join(__dirname, `manual-test-${taskId}-${fileName}.js`);
+        await fs.writeFile(testFile, testScript);
+        execSync(`node ${testFile}`, { stdio: 'ignore' }); // Synchronous for simplicity, ignore output
+      } else {
+        await autoTestTask(taskId);
+      }
+
+      io.emit('testUpdate', { taskId, status: 'testing', manual, timestamp: new Date() });
+      res.json({ message: manual ? 'Manual Playwright test launched' : 'Auto Playwright test launched' });
+    } catch (err) {
+      logger.error(`Test endpoint error: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'Test failed', details: err.message });
+    }
+  });
+
+  router.post('/self-test', async (req, res) => {
+    logger.info('Entering /api/grok/self-test');
+    try {
+      const testTask = new Task({
+        taskId: uuidv4(),
+        prompt: 'Self-test Allur Space Console functionality',
+        status: 'pending',
+        createdAt: new Date(),
+      });
+      await testTask.save();
+      await processTask(testTask.taskId);
+      await autoTestTask(testTask.taskId);
+      const memory = await Memory.findOne({ taskId: testTask.taskId });
+      io.emit('selfTestUpdate', { taskId: testTask.taskId, result: memory?.outcome || 'pending', timestamp: new Date() });
+      res.json({ message: 'Self-test initiated', taskId: testTask.taskId });
+    } catch (err) {
+      logger.error(`Self-test error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Self-test failed', details: err.message });
+    }
+  });
+
+  router.post('/self-enhance', async (req, res) => {
+    logger.info('Entering /api/grok/self-enhance');
+    try {
+      const recentFailures = await Memory.find({ outcome: 'failure' })
+        .sort({ timestamp: -1 })
+        .limit(5)
+        .lean();
+      
+      if (!recentFailures.length) {
+        io.emit('selfEnhanceUpdate', { message: 'No recent failures to enhance from', timestamp: new Date() });
+        return res.json({ message: 'No recent failures to enhance from' });
+      }
+
+      const enhancementTasks = [];
+      for (const failure of recentFailures) {
+        if (failure.lessons && failure.lessons.includes('not defined')) {
+          const missing = failure.lessons.match(/(\w+) is not defined/)?.[1];
+          if (missing && !['taskId'].includes(missing)) {
+            const newTask = new Task({
+              taskId: uuidv4(),
+              prompt: `Add ${missing} dependency to fileGeneratorV18.js and retry task ${failure.taskId}`,
+              status: 'pending',
+              createdAt: new Date(),
+            });
+            await newTask.save();
+            await Memory.create({ type: 'self_enhance_task', data: { taskId: newTask.taskId, prompt: newTask.prompt, originalTaskId: failure.taskId } });
+            enhancementTasks.push(newTask.taskId);
+            io.emit('taskUpdate', { taskId: newTask.taskId, prompt: newTask.prompt, status: 'pending', timestamp: new Date() });
+            processTask(newTask.taskId);
+          }
+        }
+      }
+
+      const techPrompt = 'Analyze latest tech updates, suggest improvements for Allur Space Console';
+      const techTask = new Task({
+        taskId: uuidv4(),
+        prompt: techPrompt,
+        status: 'pending',
+        createdAt: new Date(),
+      });
+      await techTask.save();
+      await Memory.create({ type: 'self_evolve', data: { taskId: techTask.taskId, prompt: techPrompt } });
+      enhancementTasks.push(techTask.taskId);
+      io.emit('taskUpdate', { taskId: techTask.taskId, prompt: techPrompt, status: 'pending', timestamp: new Date() });
+      processTask(techTask.taskId);
+
+      io.emit('selfEnhanceUpdate', { enhancements: enhancementTasks, timestamp: new Date() });
+      res.json({ message: 'Self-enhancement and evolution tasks queued', taskIds: enhancementTasks });
+    } catch (err) {
+      logger.error(`Self-enhancement error: ${err.message}`, { stack: err.stack });
+      io.emit('selfEnhanceUpdate', { error: err.message, timestamp: new Date() });
+      res.status(500).json({ error: 'Self-enhancement failed', details: err.message });
+    }
+  });
+
+  router.post('/update-priority', async (req, res) => {
+    logger.info('Entering /api/grok/update-priority');
+    const { taskId, priority } = req.body;
+    try {
+      const task = await Task.findOneAndUpdate({ taskId }, { priority }, { new: true });
+      await Memory.create({ type: 'priority_updated', data: { taskId, priority } });
+      await appendLog(path.join(__dirname, '../../../DEBUG_LOG.md'), 
+        `# Priority Updated\nTask ID: ${taskId}\nNew Priority: ${priority}\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('taskUpdate', { taskId, priority, timestamp: new Date() });
+      res.json({ message: 'Priority updated', task });
+    } catch (err) {
+      logger.error(`Priority update error: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'Failed to update priority', details: err.message });
+    }
+  });
+
+  router.post('/maintenance', async (req, res) => {
+    logger.info('Entering /api/grok/maintenance');
+    const { taskId, action, report } = req.body;
+    try {
+      const task = await Task.findOne({ taskId });
+      if (!task) return res.status(404).json({ error: 'Task not found' });
+      if (action === 'approve') {
+        for (const proposal of report.proposals || []) {
+          if (proposal.type === 'merge_logs') {
+            const merged = await Promise.all(proposal.files.map(f => fs.readFile(f, 'utf8')));
+            await fs.writeFile('grok.log', merged.join('\n'), 'utf8');
+            await Promise.all(proposal.files.filter(f => f !== 'grok.log').map(f => fs.unlink(f)));
+            await Memory.create({ type: 'logs_merged', data: { taskId, files: proposal.files } });
+          } else if (proposal.type === 'merge_memory') {
+            const archived = JSON.parse(await fs.readFile(proposal.files[0], 'utf8'));
+            await Memory.insertMany(archived);
+            await fs.unlink(proposal.files[0]);
+            await Memory.create({ type: 'memory_merged', data: { taskId, file: proposal.files[0] } });
+          } else if (proposal.type === 'merge_files') {
+            const merged = await Promise.all(proposal.files.map(f => fs.readFile(f, 'utf8')));
+            await fs.writeFile('fileGeneratorV18.js', merged.join('\n'), 'utf8');
+            await Promise.all(proposal.files.map(f => fs.unlink(f)));
+            await Memory.create({ type: 'files_merged', data: { taskId, files: proposal.files } });
+          }
+        }
+        task.maintenanceReport = { ...task.maintenanceReport, status: 'approved' };
+        await task.save();
+        io.emit('maintenanceUpdate', { taskId, status: 'approved', report, timestamp: new Date() });
+        res.json({ success: true, message: 'Maintenance approved' });
+      } else if (action === 'reject') {
+        task.maintenanceReport = { ...task.maintenanceReport, status: 'rejected' };
+        await task.save();
+        await Memory.create({ type: 'maintenance_rejected', data: { taskId, report } });
+        io.emit('maintenanceUpdate', { taskId, status: 'rejected', report, timestamp: new Date() });
+        res.json({ success: true, message: 'Maintenance rejected' });
+      } else {
+        res.status(400).json({ error: 'Invalid action' });
+      }
+    } catch (err) {
+      logger.error(`Maintenance action failed: ${err.message}`, { taskId, stack: err.stack });
+      res.status(500).json({ error: 'Maintenance action failed', details: err.message });
+    }
+  });
+
+  router.get('/backend-proposals', async (req, res) => {
+    logger.info('Entering /api/grok/backend-proposals');
+    try {
+      const proposals = await BackendProposal.find().lean();
+      logger.info(`Fetched ${proposals.length} backend proposals`, { proposalIds: proposals.map(p => p._id) });
+      res.json(proposals);
+    } catch (err) {
+      logger.error(`Backend proposals fetch error: ${err.message}`, { stack: err.stack });
+      res.status(500).json({ error: 'Failed to fetch backend proposals', details: err.message });
+    }
+  });
+
+  router.post('/approve-backend', async (req, res) => {
+    logger.info('Entering /api/grok/approve-backend');
+    const { proposalId } = req.body;
+    try {
+      logger.debug(`Received proposalId: ${proposalId}`, { type: typeof proposalId });
+
+      if (!proposalId || !mongoose.Types.ObjectId.isValid(proposalId)) {
+        logger.warn(`Invalid proposalId: ${proposalId}`);
+        return res.status(400).json({ error: 'Invalid proposalId format', received: proposalId });
+      }
+
+      const proposal = await BackendProposal.findById(proposalId);
+      if (!proposal) {
+        logger.warn(`Proposal not found for ID: ${proposalId}`);
+        return res.status(400).json({ error: 'Proposal not found', proposalId });
+      }
+
+      if (proposal.status !== 'pending') {
+        logger.warn(`Proposal not in pending state`, { proposalId, status: proposal.status });
+        return res.status(400).json({ error: 'Proposal is not pending', currentStatus: proposal.status });
+      }
+
+      logger.info(`Applying backend proposal`, { proposalId, file: proposal.file, change: proposal.change });
+
+      // Adjust file path based on file type
+      let filePath;
+      if (proposal.file === 'grok.js') {
+        filePath = path.join(__dirname, proposal.file); // grok.js is in src/routes/
+      } else if (proposal.file === 'db.js') {
+        filePath = path.join(__dirname, '..', proposal.file); // db.js is in src/
+      } else {
+        filePath = path.join(__dirname, '..', proposal.file); // Default to src/ for other files
+      }
+
+      // Check if file exists
+      try {
+        await fs.access(filePath);
+      } catch (err) {
+        logger.error(`File not found: ${filePath}`, { proposalId, error: err.message });
+        return res.status(400).json({ error: 'Target file does not exist', file: proposal.file });
+      }
+
+      // Backup original file
+      const backupPath = `${filePath}.bak.${Date.now()}`;
+      let originalContent = await fs.readFile(filePath, 'utf8');
+      originalContent = originalContent.replace(/\r\n/g, '\n').trim(); // Normalize line endings, remove trailing whitespace
+      await fs.writeFile(backupPath, originalContent, 'utf8');
+      logger.info(`Created backup of ${proposal.file} at ${backupPath}`, { proposalId });
+
+      let content = originalContent;
+      let newCode = '';
+
+      // Generate new code based on proposal type
+      if (proposal.change.includes('endpoint')) {
+        const endpointMatch = proposal.change.match(/POST \/api\/grok\/(\w+)/);
+        if (endpointMatch) {
+          const endpointName = endpointMatch[1];
+          newCode = `
+router.post('/${endpointName}', async (req, res) => {
+  try {
+    res.json({ message: '${endpointName} endpoint called' });
+  } catch (err) {
+    logger.error('${endpointName} error: \${err.message}', { stack: err.stack });
+    res.status(500).json({ error: 'Failed', details: err.message });
+  }
+});
+          `;
+        }
+      } else if (proposal.change.includes('schema')) {
+        const schemaMatch = proposal.change.match(/Add (\w+) field to (\w+) schema/);
+        if (schemaMatch) {
+          const [_, field, schemaName] = schemaMatch;
+          newCode = `  ${field}: { type: String },`;
+          content = content.replace(
+            `${schemaName}Schema = new mongoose.Schema({`,
+            `${schemaName}Schema = new mongoose.Schema({\n${newCode}`
+          );
+          newCode = ''; // Reset since schema changes are inline
+        }
+      } else if (proposal.change.includes('middleware')) {
+        newCode = `
+const sanitizeInput = (req, res, next) => {
+  Object.keys(req.body).forEach(key => {
+    if (typeof req.body[key] === 'string') {
+      req.body[key] = req.body[key].replace(/[<>]/g, '');
+    }
+  });
+  next();
+};
+router.use(sanitizeInput);
+        `;
+      } else if (proposal.change.includes('rate limiting')) {
+        newCode = `
+const rateLimit = require('express-rate-limit');
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+router.use(limiter);
+        `;
+        await execSync(`npm install express-rate-limit --save`, { cwd: path.join(__dirname, '../../..'), stdio: 'ignore' });
+        logger.info('Installed express-rate-limit for rate limiting', { proposalId });
+      }
+
+      // Append new code with clean separation
+      if (newCode) {
+        newCode = newCode.replace(/\r\n/g, '\n').trim(); // Normalize newCode line endings
+        content = `${originalContent}\n// --- Allur Space Console Addition (Proposal ID: ${proposalId}) ---\n${newCode}\n// --- End Addition ---`;
+      }
+
+      // Pre-validation checks
+      logger.debug(`Pre-validation content length: ${content.length}`, { proposalId });
+      const lines = content.split('\n');
+      logger.debug(`Lines around 55-65 for ${proposal.file}`, { 
+        lines: lines.slice(50, 70).map((line, i) => `${i + 51}: ${line}`) 
+      });
+      logger.debug(`Proposed content for ${proposal.file}`, { content });
+
+      // Validate syntax before applying using Node's parser
+      try {
+        const tempFile = path.join(__dirname, `temp-${proposalId}.js`);
+        await fs.writeFile(tempFile, content, 'utf8');
+        execSync(`node -c ${tempFile}`, { stdio: 'ignore' });
+        await fs.unlink(tempFile);
+        logger.info(`Syntax validated successfully for ${proposal.file}`, { proposalId });
+      } catch (syntaxErr) {
+        logger.error(`Syntax validation failed for ${proposal.file}`, { proposalId, error: syntaxErr.message });
+        await fs.unlink(backupPath);
+        return res.status(400).json({ error: 'Proposed change has invalid syntax', details: syntaxErr.message });
+      }
+
+      // Apply changes with detailed error handling
+      try {
+        await fs.writeFile(filePath, content, 'utf8');
+        logger.info(`Successfully wrote changes to ${filePath}`, { proposalId });
+      } catch (writeErr) {
+        logger.error(`Failed to write changes to ${proposal.file}`, { proposalId, error: writeErr.message, stack: writeErr.stack });
+        await fs.writeFile(filePath, originalContent, 'utf8');
+        await fs.unlink(backupPath);
+        return res.status(500).json({ error: 'Failed to apply changes to file', details: writeErr.message });
+      }
+
+      // Update proposal status
+      proposal.status = 'approved';
+      proposal.appliedAt = new Date();
+      await proposal.save();
+
+      await Memory.create({ type: 'backend_approved', data: { proposalId, file: proposal.file, change: proposal.change } });
+      await appendLog(path.join(__dirname, '../../../FEATURE_LOG.md'), 
+        `# Backend Proposal Approved\nProposal ID: ${proposalId}\nFile: ${proposal.file}\nChange: ${proposal.change}\nNew Code: ${newCode}\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('backendProposalUpdate', { proposalId, status: 'approved' });
+      logger.info(`Backend proposal approved successfully`, { proposalId });
+      res.json({ message: 'Backend change applied', backup: backupPath });
+    } catch (err) {
+      logger.error(`Backend approval error: ${err.message}`, { proposalId, stack: err.stack });
+      res.status(500).json({ error: 'Approval failed', details: err.message });
+    }
+  });
+
+  router.post('/deny-backend', async (req, res) => {
+    logger.info('Entering /api/grok/deny-backend');
+    const { proposalId } = req.body;
+    try {
+      if (!mongoose.Types.ObjectId.isValid(proposalId)) {
+        logger.warn(`Invalid proposalId: ${proposalId}`);
+        return res.status(400).json({ error: 'Invalid proposalId format' });
+      }
+      const proposal = await BackendProposal.findById(proposalId);
+      if (!proposal) {
+        logger.warn(`Proposal not found for ID: ${proposalId}`);
+        return res.status(404).json({ error: 'Proposal not found' });
+      }
+      proposal.status = 'denied';
+      await proposal.save();
+      await Memory.create({ type: 'backend_denied', data: { proposalId, file: proposal.file, change: proposal.change } });
+      await appendLog(path.join(__dirname, '../../../DEBUG_LOG.md'), 
+        `# Backend Proposal Denied\nProposal ID: ${proposalId}\nFile: ${proposal.file}\nChange: ${proposal.change}\nTimestamp: ${new Date().toISOString()}`);
+      io.emit('backendProposalUpdate', { proposalId, status: 'denied' });
+      logger.info(`Backend proposal denied successfully`, { proposalId });
+      res.json({ message: 'Backend proposal denied' });
+    } catch (err) {
+      logger.error(`Backend denial error: ${err.message}`, { proposalId, stack: err.stack });
+      res.status(500).json({ error: 'Denial failed', details: err.message });
+    }
+  });
+
+  logger.info('Allur Space Console: Initialized with Socket.IO');
+  console.log('Allur Space Console: Initialized with Socket.IO');
+  return router;
+};

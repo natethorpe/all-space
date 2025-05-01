@@ -1,3 +1,4 @@
+// File Path: backend/src/controllers/middlewaresControllers/createCRUDController/summary.js
 const summary = async (Model, req, res) => {
   //  Query the database for a list of all results
   const countPromise = Model.countDocuments({

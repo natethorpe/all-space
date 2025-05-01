@@ -1,0 +1,1778 @@
+{
+  ".DS_Store": null,
+  ".git": {
+    "config": null,
+    "description": null,
+    "HEAD": null,
+    "hooks": {
+      "applypatch-msg.sample": null,
+      "commit-msg.sample": null,
+      "fsmonitor-watchman.sample": null,
+      "post-update.sample": null,
+      "pre-applypatch.sample": null,
+      "pre-commit.sample": null,
+      "pre-merge-commit.sample": null,
+      "pre-push.sample": null,
+      "pre-rebase.sample": null,
+      "pre-receive.sample": null,
+      "prepare-commit-msg.sample": null,
+      "push-to-checkout.sample": null,
+      "sendemail-validate.sample": null,
+      "update.sample": null
+    },
+    "index": null,
+    "info": {
+      "exclude": null
+    },
+    "logs": {
+      "HEAD": null,
+      "refs": {
+        "heads": {
+          "master": null
+        },
+        "remotes": {
+          "origin": {
+            "HEAD": null
+          }
+        }
+      }
+    },
+    "objects": {
+      "info": {},
+      "pack": {
+        "pack-f733001711078c36b1ea3344752a4c6e83291f0b.idx": null,
+        "pack-f733001711078c36b1ea3344752a4c6e83291f0b.pack": null,
+        "pack-f733001711078c36b1ea3344752a4c6e83291f0b.rev": null
+      }
+    },
+    "packed-refs": null,
+    "refs": {
+      "heads": {
+        "master": null
+      },
+      "remotes": {
+        "origin": {
+          "HEAD": null
+        }
+      },
+      "tags": {}
+    }
+  },
+  ".github": {
+    "ISSUE_TEMPLATE": {
+      "bug_report.md": null,
+      "custom.md": null,
+      "feature_request.md": null
+    },
+    "pull_request_template.md": null,
+    "workflows": {
+      "CODEOWNERS": null,
+      "codesee-arch-diagram.yml": null,
+      "github-repo-stats.yml": null
+    }
+  },
+  ".gitignore": null,
+  ".vscode": {
+    "settings.json": null
+  },
+  "aggregateProject.js": null,
+  "backend": {
+    ".env": null,
+    ".eslintrc.js": null,
+    ".gitignore": null,
+    ".prettierignore": null,
+    ".prettierrc": null,
+    ".vscode": {
+      "settings.json": null
+    },
+    "aggregateProject.js": null,
+    "app.js": null,
+    "assignSponsors.js": null,
+    "checkAdmin.js": null,
+    "checkSponsors.js": null,
+    "curl": null,
+    "ERROR_LOG.md": null,
+    "grok.log": null,
+    "grok.log.part1": null,
+    "jsconfig.json": null,
+    "node_modules": null,
+    "package-lock.json": null,
+    "package.json": null,
+    "project_structure.txt": null,
+    "reseedSponsors.js": null,
+    "resetPassword.js": null,
+    "resetStaffPassword.js": null,
+    "review-changes.js": null,
+    "screenshot-0.png": null,
+    "screenshot-AppRouter.jsx-0.png": null,
+    "screenshot-EmployeeLog-v2.jsx-0.png": null,
+    "screenshot-EmployeeLog-v3.jsx-0.png": null,
+    "screenshot-EmployeeLog-v4.jsx-0.png": null,
+    "screenshot-EmployeeLog-v4.jsx-1.png": null,
+    "screenshot-EmployeeLog-v4.jsx-2.png": null,
+    "screenshot-EmployeeLog-v564.jsx-1.png": null,
+    "screenshot-EmployeeLog.jsx-0.png": null,
+    "screenshot-EmployeeLog.jsx-1.png": null,
+    "screenshot-EmployeeLog.jsx-2.png": null,
+    "screenshot-grok_report.json-0.png": null,
+    "screenshot-Login-v1.jsx-0.png": null,
+    "screenshot-Login.jsx-0.png": null,
+    "screenshot-Settings.jsx-0.png": null,
+    "screenshot-SponsorProfile.jsx-0.png": null,
+    "seed.js": null,
+    "seedAdmin.js": null,
+    "seedNewAdmin.js": null,
+    "seedSampleData.js": null,
+    "setupAdmin.js": null,
+    "src": {
+      "controllers": {
+        "appControllers": {
+          "clientController": {
+            "index.js": null,
+            "summary.js": null
+          },
+          "index.js": null,
+          "invoiceController": {
+            "create.js": null,
+            "index.js": null,
+            "paginatedList.js": null,
+            "read.js": null,
+            "remove.js": null,
+            "schemaValidate.js": null,
+            "sendMail.js": null,
+            "summary.js": null,
+            "update.js": null
+          },
+          "paymentController": {
+            "create.js": null,
+            "index.js": null,
+            "remove.js": null,
+            "sendMail.js": null,
+            "summary.js": null,
+            "update.js": null
+          },
+          "paymentModeController": {
+            "index.js": null
+          },
+          "quoteController": {
+            "convertQuoteToInvoice.js": null,
+            "create.js": null,
+            "index.js": null,
+            "paginatedList.js": null,
+            "read.js": null,
+            "sendMail.js": null,
+            "summary.js": null,
+            "update.js": null
+          },
+          "sponsorController.js": null,
+          "taxesController": {
+            "index.js": null
+          }
+        },
+        "coreControllers": {
+          "adminAuth": {
+            "index.js": null
+          },
+          "adminController": {
+            "index.js": null
+          },
+          "settingController": {
+            "index.js": null,
+            "listAll.js": null,
+            "listBySettingKey.js": null,
+            "readBySettingKey.js": null,
+            "updateBySettingKey.js": null,
+            "updateManySetting.js": null
+          },
+          "setup.js": null
+        },
+        "middlewaresControllers": {
+          "createAuthMiddleware": {
+            "authUser.js": null,
+            "checkAndCorrectURL.js": null,
+            "forgetPassword.js": null,
+            "index.js": null,
+            "isValidAuthToken.js": null,
+            "login.js": null,
+            "logout.js": null,
+            "resetPassword.js": null,
+            "sendMail.js": null
+          },
+          "createCRUDController": {
+            "create.js": null,
+            "filter.js": null,
+            "index.js": null,
+            "listAll.js": null,
+            "paginatedList.js": null,
+            "read.js": null,
+            "remove.js": null,
+            "search.js": null,
+            "summary.js": null,
+            "update.js": null
+          },
+          "createUserController": {
+            "index.js": null,
+            "read.js": null,
+            "updatePassword.js": null,
+            "updateProfile.js": null,
+            "updateProfilePassword.js": null
+          }
+        },
+        "pdfController": {
+          "index.js": null
+        }
+      },
+      "createAdmin.js": null,
+      "db.js": null,
+      "db.js.bak": null,
+      "db.js.bak.1744241204864": null,
+      "db.js.bak.1744241676300": null,
+      "db.js.bak.1744250717113": null,
+      "db.js.bak.1744250731514": null,
+      "emailTemplate": {
+        "emailVerfication.js": null,
+        "SendEmailTemplate.js": null
+      },
+      "grok.js": null,
+      "handlers": {
+        "downloadHandler": {
+          "downloadPdf.js": null
+        },
+        "errorHandlers.js": null
+      },
+      "helpers.js": null,
+      "locale": {
+        "languages.js": null,
+        "translation": {
+          "en_us.js": null
+        },
+        "useLanguage.js": null
+      },
+      "middlewares": {
+        "auth.js": null,
+        "inventory": {
+          "generateUniqueNumber.js": null,
+          "index.js": null
+        },
+        "serverData.js": null,
+        "settings": {
+          "increaseBySettingKey.js": null,
+          "index.js": null,
+          "listAllSettings.js": null,
+          "listBySettingKey.js": null,
+          "loadSettings.js": null,
+          "readBySettingKey.js": null,
+          "updateBySettingKey.js": null,
+          "updateManySetting.js": null
+        },
+        "uploadMiddleware": {
+          "DoSingleStorage.js": null,
+          "index.js": null,
+          "LocalSingleStorage.js": null,
+          "singleStorageUpload.js": null,
+          "utils": {
+            "fileFilterMiddleware.js": null,
+            "LocalfileFilter.js": null
+          }
+        }
+      },
+      "models": {
+        ".gitkeep": null,
+        "appModels": {
+          "Client.js": null,
+          "Invoice.js": null,
+          "Payment.js": null,
+          "PaymentMode.js": null,
+          "Quote.js": null,
+          "Settings.js": null,
+          "Sponsors.js": null,
+          "Taxes.js": null
+        },
+        "coreModels": {
+          "Admin.js": null,
+          "AdminPassword.js": null,
+          "Setting.js": null,
+          "Upload.js": null
+        },
+        "utils": {
+          "index.js": null
+        }
+      },
+      "pdf": {
+        "Invoice.pug": null,
+        "Offer.pug": null,
+        "Payment.pug": null,
+        "Quote.pug": null
+      },
+      "public": {
+        "uploads": {
+          "admin": {
+            "idurar-icon-png-80-i1kez.png": null
+          },
+          "setting": {
+            "company-logo.png": null
+          }
+        }
+      },
+      "routes": {
+        "appRoutes": {
+          "appApi.js": null,
+          "index.js": null,
+          "sponsor.js": null
+        },
+        "bu-grok.js": null,
+        "coreRoutes": {
+          "coreApi.js": null,
+          "coreAuth.js": null,
+          "coreDownloadRouter.js": null,
+          "corePublicRouter.js": null
+        },
+        "grok.js": null,
+        "grok.js.bak": null,
+        "grok.js.bak.1744241209129": null,
+        "grok.js.bak.1744241682353": null,
+        "grok.js.bak.1744250725631": null,
+        "manual-test-3ef35a17-82e6-4852-be92-a9aa1cb2fb51-EmployeeLog.jsx.js": null,
+        "manual-test-6ad368ed-5582-4239-9d68-ed72a39e7a2d-EmployeeLog.jsx.js": null,
+        "manual-test-9bf47395-7e30-4daa-9e54-cd46ad14b585-EmployeeLog-v564.jsx.js": null,
+        "manual-test-af27b35e-7957-42d2-81f3-6db798bc3033-EmployeeLog.jsx.js": null,
+        "proposalRoutes.js": null,
+        "systemRoutes.js": null,
+        "taskRoutes.js": null
+      },
+      "routes.js": null,
+      "settings": {
+        "index.js": null,
+        "useAppSettings.js": null,
+        "useDate.js": null,
+        "useMoney.js": null
+      },
+      "setup": {
+        "defaultSettings": {
+          "appSettings.json": null,
+          "clientSettings.json": null,
+          "companySettings.json": null,
+          "financeSettings.json": null,
+          "invoiceSettings.json": null,
+          "moneyFormatSettings.json": null,
+          "quoteSettings.json": null
+        },
+        "reset.js": null,
+        "setup.js": null,
+        "setupConfig.json": null
+      },
+      "socket.js": null,
+      "tasks.json": null,
+      "temp_grok_test.jsx": null,
+      "test-a0e6c29b-78e8-4d1c-a1c1-b1e5ff910bbc-0.js": null,
+      "utils": {
+        "ai.js": null,
+        "countryList.js": null,
+        "currency.js": null,
+        "currencyList.js": null,
+        "fileGeneratorV18.js": null,
+        "fileUtils.js": null,
+        "is-path-inside.js": null,
+        "promptParser.js": null,
+        "selfEnhancer.js": null,
+        "systemAnalyzer.js": null,
+        "taskManager.js": null,
+        "taskProcessorV18.js": null,
+        "taskTesterV18.js": null,
+        "test-008cabd4-2777-4fda-9d28-be138cf985cc-EmployeeLog-v6.jsx-0.js": null,
+        "test-008cabd4-2777-4fda-9d28-be138cf985cc-EmployeeLog-v6.jsx-1.js": null,
+        "test-008cabd4-2777-4fda-9d28-be138cf985cc-EmployeeLog-v6.jsx-2.js": null,
+        "test-06588c4c-c660-4292-ae5c-1aff4b040e1d-EmployeeLog-v8.jsx.js": null,
+        "test-08bbebd5-ac31-489a-b7f3-58c8670c6c3c-EmployeeLog-v152.jsx.js": null,
+        "test-0e98673c-592e-4154-8434-b619f0519936-EmployeeLog.jsx-1.js": null,
+        "test-14f53200-4ec6-4e41-aabf-6f77f6396ec3-EmployeeLog.jsx-1.js": null,
+        "test-177f09b9-c895-49e3-859e-1fa9002835e0-SponsorProfile.jsx-0.js": null,
+        "test-2b631674-a9bf-4c31-b3db-c7d4955f843d-EmployeeLog.jsx-1.js": null,
+        "test-2e1e7c11-79c8-48e6-9c96-16994e4168fc-EmployeeLog-v408.jsx.js": null,
+        "test-2e3c39ea-84f7-4b28-9c18-ab2617fadf1b-EmployeeLog.jsx-1.js": null,
+        "test-2e50701a-c7ac-4b83-b8d3-2634e054821d-AppRouter.jsx-0.js": null,
+        "test-2e50701a-c7ac-4b83-b8d3-2634e054821d-Login.jsx-0.js": null,
+        "test-3b835e0e-3544-41a0-8b20-602dca931c76-EmployeeLog-v2.jsx-0.js": null,
+        "test-3b835e0e-3544-41a0-8b20-602dca931c76-EmployeeLog.jsx-0.js": null,
+        "test-3ef35a17-82e6-4852-be92-a9aa1cb2fb51-EmployeeLog.jsx.js": null,
+        "test-404439b8-bdac-47b6-b372-bc6f39db72d2-SponsorProfile.jsx-0.js": null,
+        "test-411d72b1-e363-45d9-9b4a-eff2b859b7a6-EmployeeLog-v3.jsx-0.js": null,
+        "test-411d72b1-e363-45d9-9b4a-eff2b859b7a6-EmployeeLog.jsx-0.js": null,
+        "test-419a568d-2f1b-4778-9e45-d782810cba42-EmployeeLog.jsx.js": null,
+        "test-420e082b-fb1e-4873-85ed-455f12dc317b-SponsorProfile.jsx-0.js": null,
+        "test-561408bf-860c-4c01-84c4-19bfc7855209-EmployeeLog.jsx-1.js": null,
+        "test-5c06e48f-a2e7-4043-a45a-45a729b92def-EmployeeLog.jsx-1.js": null,
+        "test-60f3dcb9-f72c-4f8b-b9b8-3de366d7507b-SponsorProfile.jsx-0.js": null,
+        "test-624ece73-9b50-4108-bb3d-a413f65a1f21-EmployeeLog-v870.jsx.js": null,
+        "test-6ad368ed-5582-4239-9d68-ed72a39e7a2d-EmployeeLog.jsx-1.js": null,
+        "test-70471781-41bc-44f9-b6ff-371dbdf314d9-EmployeeLog.jsx-1.js": null,
+        "test-76430b0e-0616-49c7-ba71-69cdcae8af43-EmployeeLog-v979.jsx.js": null,
+        "test-83f718ca-ba95-4ceb-b1aa-5209ce6030b8-EmployeeLog.jsx.js": null,
+        "test-8597fad6-e56d-4368-bb14-8f230db6abd4-EmployeeLog-v737.jsx.js": null,
+        "test-8b91e464-3919-47e5-8051-55edced2f57f-EmployeeLog.jsx-1.js": null,
+        "test-8bfe5020-e766-4a3d-bdff-9607bcfe410f-EmployeeLog.jsx-1.js": null,
+        "test-8f57c488-dbec-4788-84df-0d22c4f4ae1f-EmployeeLog.jsx.js": null,
+        "test-8f689c47-c267-4b9b-baff-715dcef27f70-AppRouter.jsx-0.js": null,
+        "test-8f689c47-c267-4b9b-baff-715dcef27f70-Login-v1.jsx-0.js": null,
+        "test-8f689c47-c267-4b9b-baff-715dcef27f70-Login.jsx-0.js": null,
+        "test-8f689c47-c267-4b9b-baff-715dcef27f70-Settings.jsx-0.js": null,
+        "test-8f9b311e-6615-424c-891b-83ab013c4e8e-EmployeeLog-v693.jsx.js": null,
+        "test-9195bf8f-e247-43f6-aa0e-a899b549ad29-EmployeeLog.jsx-1.js": null,
+        "test-928ae005-d94e-4a0f-a625-de3d82a66e0e-SponsorProfile.jsx-0.js": null,
+        "test-9349a8ad-7148-4baf-a3db-9c2f70129756-EmployeeLog.jsx.js": null,
+        "test-9bf47395-7e30-4daa-9e54-cd46ad14b585-EmployeeLog-v564.jsx-1.js": null,
+        "test-9d33d2f4-9def-4a9a-b02e-484adaddc3e7-EmployeeLog.jsx-1.js": null,
+        "test-a0571691-4285-4e48-9414-25dca01a7c38-AppRouter.jsx-0.js": null,
+        "test-a0571691-4285-4e48-9414-25dca01a7c38-Login.jsx-0.js": null,
+        "test-a092a4b8-a657-42f6-8bca-f604b810b671-EmployeeLog.jsx-1.js": null,
+        "test-a92dcc63-218e-4d35-8a99-1f8165613beb-EmployeeLog.jsx-1.js": null,
+        "test-a9ca146a-c783-4710-9d41-96589ff31465-EmployeeLog.jsx-1.js": null,
+        "test-a9f17ce2-4356-4ac6-9808-e283f3f9a70c-SponsorProfile.jsx-0.js": null,
+        "test-af27b35e-7957-42d2-81f3-6db798bc3033-EmployeeLog.jsx-1.js": null,
+        "test-b4b80273-3291-4a3a-993a-53a33f9000a4-EmployeeLog.jsx-1.js": null,
+        "test-b5493226-2ba4-49be-87fb-ab6e4ef95e19-EmployeeLog-v320.jsx.js": null,
+        "test-cb7a00b7-e937-4c32-9bf3-7ab17c1ff8a6-grok_report.json-0.js": null,
+        "test-d153641e-0635-478d-b47e-826b89702857-EmployeeLog.jsx-1.js": null,
+        "test-d2bb8b2c-88e9-43dc-8d54-385a99317d5b-EmployeeLog.jsx-1.js": null,
+        "test-d34f3e8b-712f-4ddc-a42c-744ca39f99ae-EmployeeLog.jsx-1.js": null,
+        "test-d40aa35a-e424-4051-ae62-ee33b73d6cf5-AppRouter.jsx-0.js": null,
+        "test-d40aa35a-e424-4051-ae62-ee33b73d6cf5-SponsorProfile.jsx-0.js": null,
+        "test-d63e97de-a19f-4ab2-aa6e-8ee9f4c8bd46-EmployeeLog.jsx.js": null,
+        "test-d984c4c4-d5f3-4686-a85a-62b2f7ae5379-EmployeeLog.jsx-0.js": null,
+        "test-daa8bbcd-a04d-452d-a04d-8f8443438301-SponsorProfile.jsx-0.js": null,
+        "test-daddc8b5-280f-4543-b30e-23819ea8ac63-SponsorProfile.jsx-0.js": null,
+        "test-e41c0745-b5f1-4049-9614-971104e37326-EmployeeLog.jsx-1.js": null,
+        "test-ea2988f0-60d8-4c0c-95dc-a34fad4414ee-EmployeeLog-v4.jsx-0.js": null,
+        "test-ea2988f0-60d8-4c0c-95dc-a34fad4414ee-EmployeeLog-v4.jsx-1.js": null,
+        "test-ea2988f0-60d8-4c0c-95dc-a34fad4414ee-EmployeeLog-v4.jsx-2.js": null,
+        "test-ea2988f0-60d8-4c0c-95dc-a34fad4414ee-EmployeeLog.jsx-0.js": null,
+        "test-ea2988f0-60d8-4c0c-95dc-a34fad4414ee-EmployeeLog.jsx-1.js": null,
+        "test-ea2988f0-60d8-4c0c-95dc-a34fad4414ee-EmployeeLog.jsx-2.js": null,
+        "test-f11c4c34-07db-4fd0-8f4c-bb3a175e74bd-EmployeeLog.jsx-1.js": null,
+        "test-f15569c1-a74b-4555-9ab9-adc13d9063c5-EmployeeLog-v7.jsx.js": null,
+        "test-f3970745-4bf6-4124-943c-910bd1538726-EmployeeLog.jsx-1.js": null,
+        "test-fb38256c-6fe2-4858-8b40-18b7f6514599-EmployeeLog-v5.jsx-0.js": null,
+        "test-fb38256c-6fe2-4858-8b40-18b7f6514599-EmployeeLog-v5.jsx-1.js": null,
+        "test-fb38256c-6fe2-4858-8b40-18b7f6514599-EmployeeLog-v5.jsx-2.js": null,
+        "test-fd986f03-bc2a-4199-ab32-1b56b69e471f-SponsorProfile.jsx-0.js": null,
+        "test-ff8e85b2-d20c-4933-8d0e-b91f6ff32701-AppRouter.jsx-0.js": null,
+        "test-ff8e85b2-d20c-4933-8d0e-b91f6ff32701-Login.jsx-0.js": null,
+        "testGenerator.js": null
+      }
+    },
+    "structure.txt": null,
+    "temp.js": null,
+    "test-db.js": null,
+    "test-env.js": null,
+    "test-results": {
+      ".last-run.json": null
+    },
+    "test-xai.js": null,
+    "test.js": null,
+    "testPss.js": null,
+    "updateSponsorTiers.js": null,
+    "uploads": {
+      "40cf912cc5121424a312b52ebf6d7aad": null,
+      "bcb84d450b46deb6e5356292a4750d75": null,
+      "c5e136c6b66afb13a3ec4372cf6cc617": null,
+      "cddd2e6b03d2e879fa98428e32b73080": null,
+      "d381764ef5261bbf527bc353fbc0a571": null,
+      "e149bc0c5622d7a923679cd70ff9648c": null
+    }
+  },
+  "CHANGELOG.md": null,
+  "CODE-OF-CONDUCT.md": null,
+  "Comprehensive_Project_Overview.md": null,
+  "CONNECTIVITY_LOG.md": null,
+  "CONTRIBUTING.md": null,
+  "DEBUG_LOG.md": null,
+  "dir": null,
+  "doc": {
+    "Comprehensive_Project_Overview.md": null,
+    "README.fr.md": null,
+    "README.sp.md": null
+  },
+  "ERROR_LOG.md": null,
+  "features": {
+    "ar_eg_ملف_مفتوح_المصدر_مجاني_للبرمجيات_ERP_CRM.md": null,
+    "bg_bg_свободен_отворен_източник_erp_crm_софтуер.md": null,
+    "bn_bd_ফ্রি_ওপেন_সোর্স_ইআরপি_সিআরএম_সফটওয়্যার.md": null,
+    "ca_es_software_erp_crm_de_codi_obert_gratuït.md": null,
+    "cs_cz_volný_otevřený_zdroj_erp_crm_software.md": null,
+    "da_dk_gratis_åben_kilde_erp_crm_software.md": null,
+    "de_de_frei_offene_quelle_erp_crm_software.md": null,
+    "el_gr_ελεύθερο_ανοικτο_πηγαίο_erp_crm_λογισμικό.md": null,
+    "en_us_free_open_source_erp_crm_software.md": null,
+    "es_es_software_erp_crm_de_código_abierto_y_gratis.md": null,
+    "et_ee_tasuta_avatud_lähtekoodiga_erp_crm_tarkvara.md": null,
+    "fa_ir_رایگان_منبع_باز_نرم‌افزار_مدیریت_مالی_و_ارتباطات.md": null,
+    "fi_fi_ilmainen_avoin_lähdekoodi_erp_crm_ohjelmisto.md": null,
+    "fr_fr_gratuit_logiciel_erp_crm_open_source.md": null,
+    "hi_in_मुफ्त_खुला_स्रोत_ईआरपी_सीआरएम_सॉफ़्टवेयर.md": null,
+    "hr_hr_besplatni_otvoreni_izvor_erp_crm_softver.md": null,
+    "hu_hu_ingyenes_nyílt_forráskódú_erp_crm_szoftver.md": null,
+    "id_id_perangkat_lunak_erp_crm_sumber_terbuka_gratis.md": null,
+    "it_it_software_erp_crm_open_source_gratuito.md": null,
+    "ja_jp_フリーオープンソースERP CRMソフトウェア.md": null,
+    "ko_kr_자유_오픈_소스_ERP_CRM_소프트웨어.md": null,
+    "lt_lt_nemokamas_atviras_kodo_erp_crm_programinė_įranga.md": null,
+    "lv_lv_bezmaksas_atvērtā_koda_erp_crm_programmatūra.md": null,
+    "mk_mk_фрее_опен_сорсе_ерп_црм_софтвер.md": null,
+    "ms_my_fail_terbuka_sumber_erp_crm_perisian.md": null,
+    "nb_no_gratis_åpen_kilde_erp_crm_programvare.md": null,
+    "nl_nl_vrije_open_source_erp_crm_software.md": null,
+    "pl_pl_bezpłatne_otwarte_źródło_erp_crm_oprogramowanie.md": null,
+    "pt_br_software_de_erp_e_crm_de_código_aberto_gratuito.md": null,
+    "pt_pt_software_de_erp_crm_de_código_aberto_gratuito.md": null,
+    "ro_ro_software_erp_crm_open_source_gratuit.md": null,
+    "ru_ru_бесплатное_открытое_программное_обеспечение_erp_crm.md": null,
+    "sk_sk_zdarma_otvorene_zdrojove_erp_crm_software.md": null,
+    "sl_si_brezplačni_odprtokodni_erp_crm_programski_oprema.md": null,
+    "sr_rs_besplatni_otvoreni_izvor_erp_crm_softver.md": null,
+    "sv_se_fri_öppen_källkods_erp_crm_programvara.md": null,
+    "th_th_ฟรี_โปรแกรม_ตัวจัดการแหล่งข้อมูลโปรแกรม_ERP_CRM.md": null,
+    "tr_tr_ücretsiz_açık_kaynak_erp_crm_yazılımı.md": null,
+    "uk_ua_безкоштовне_відкрите_джерело_erp_crm_програмне_забезпечення.md": null,
+    "ur_pk_مفت_کھولیں_سورس_erp_crm_سافٹ ویئر.md": null,
+    "vi_vn_chương_trình_quản_lý_doanh_nghiệp_crm_nguồn_mở_miễn_phí.md": null,
+    "zh_cn_免费开源ERP CRM软件.md": null
+  },
+  "FEATURE_LOG.md": null,
+  "frontend": {
+    ".env": null,
+    ".eslintrc.js": null,
+    ".gitignore": null,
+    ".prettierignore": null,
+    ".prettierrc": null,
+    ".vscode": {
+      "settings.json": null
+    },
+    "aggregateProject.js": null,
+    "capacitor.config.json": null,
+    "dist": {
+      "assets": {
+        "actions-DwhNvpDC.js": null,
+        "Dashboard-J-b1FHkX.js": null,
+        "favicon-Dd1eRHaG.ico": null,
+        "ForgetPassword-CSxtx9EC.js": null,
+        "idurar-crm-erp-OAgYHBt3.svg": null,
+        "IdurarOs-Db6iqwng.js": null,
+        "IdurarOs-DCPcS2T1.css": null,
+        "index-CA8EBuqW.js": null,
+        "index-DfY6Iwt0.js": null,
+        "index-DlmborSh.css": null,
+        "index-SpZ4EpVg.js": null,
+        "index-XeUkXpa3.js": null,
+        "LockOutlined-CegUrbko.js": null,
+        "Login-B_tbHq_e.js": null,
+        "Logout--xLtka4P.js": null,
+        "NotFound-BCCY7Jzv.js": null,
+        "ResetPassword-1O8a2k49.js": null,
+        "useLanguage-DTg7DSD0.js": null
+      },
+      "index.html": null,
+      "robots.txt": null
+    },
+    "frontend-context.txt": null,
+    "index.html": null,
+    "jsconfig.json": null,
+    "node_modules": null,
+    "package-lock.json": null,
+    "package.json": null,
+    "public": {
+      "robots.txt": null
+    },
+    "README.md": null,
+    "rollup.config.js": null,
+    "src": {
+      "App.jsx": null,
+      "AppRouter.jsx": null,
+      "apps": {
+        "ErpApp.jsx": null,
+        "Header": {
+          "HeaderContainer.jsx": null,
+          "UpgradeButton.jsx": null
+        },
+        "IdurarOs.jsx": null,
+        "Navigation": {
+          "NavigationContainer.jsx": null
+        }
+      },
+      "auth": {
+        "auth.service.js": null,
+        "index.js": null,
+        "types.js": null
+      },
+      "components": {
+        "AutoCompleteAsync": {
+          "index.jsx": null
+        },
+        "CollapseBox": {
+          "index.jsx": null
+        },
+        "CreateForm": {
+          "index.jsx": null
+        },
+        "CrudModal": {
+          "index.jsx": null
+        },
+        "DashboardModule": {
+          "components": {
+            "RecentTable": {
+              "index.jsx": null
+            }
+          },
+          "index.jsx": null
+        },
+        "DataTable": {
+          "DataTable.jsx": null
+        },
+        "DeleteModal": {
+          "index.jsx": null
+        },
+        "DiffView.jsx": null,
+        "ErrorAlerts.jsx": null,
+        "GrokAnalyzer.jsx": null,
+        "IconMenu": {
+          "index.jsx": null
+        },
+        "LiveFeed.jsx": null,
+        "Loading": {
+          "index.jsx": null
+        },
+        "MoneyInputFormItem": {
+          "index.jsx": null
+        },
+        "MultiStepSelectAsync": {
+          "index.jsx": null
+        },
+        "NotFound": {
+          "index.jsx": null
+        },
+        "Notification": {
+          "index.jsx": null,
+          "Notification.jsx": null
+        },
+        "outsideClick.js": {
+          "demo.js": null,
+          "index.js": null
+        },
+        "PageLoader": {
+          "index.jsx": null
+        },
+        "ProposalList.jsx": null,
+        "ReadItem": {
+          "index.jsx": null
+        },
+        "SearchItem": {
+          "index.jsx": null
+        },
+        "SelectAsync": {
+          "index.jsx": null
+        },
+        "SelectTag": {
+          "index.jsx": null
+        },
+        "SidePanel": {
+          "index.jsx": null
+        },
+        "SponsorCalander.jsx": null,
+        "SponsorshipSummary.jsx": null,
+        "TabsContent": {
+          "TabsContent.jsx": null
+        },
+        "Tag": {
+          "index.jsx": null
+        },
+        "TaskInput.jsx": null,
+        "TaskList.jsx": null,
+        "TaskModals.jsx": null,
+        "UpdateForm": {
+          "index.jsx": null
+        },
+        "Visibility": {
+          "index.jsx": null
+        }
+      },
+      "config": {
+        "serverApiConfig.js": null
+      },
+      "context": {
+        "adavancedCrud": {
+          "actions.jsx": null,
+          "index.jsx": null,
+          "reducer.jsx": null,
+          "selectors.jsx": null,
+          "types.jsx": null
+        },
+        "appContext": {
+          "actions.jsx": null,
+          "index.jsx": null,
+          "reducer.jsx": null,
+          "types.jsx": null
+        },
+        "crud": {
+          "actions.jsx": null,
+          "index.jsx": null,
+          "reducer.jsx": null,
+          "selectors.jsx": null,
+          "types.jsx": null
+        },
+        "erp": {
+          "actions.jsx": null,
+          "index.jsx": null,
+          "reducer.jsx": null,
+          "selectors.jsx": null,
+          "types.jsx": null
+        },
+        "profileContext": {
+          "actions.jsx": null,
+          "index.jsx": null,
+          "reducer.jsx": null,
+          "selectors.jsx": null,
+          "types.jsx": null
+        }
+      },
+      "favicon.ico": null,
+      "forms": {
+        "AdminForm.jsx": null,
+        "AdvancedSettingsForm.jsx": null,
+        "CurrencyForm.jsx": null,
+        "CustomerForm.jsx": null,
+        "DynamicForm": {
+          "index.jsx": null
+        },
+        "EmployeeForm.jsx": null,
+        "ForgetPasswordForm.jsx": null,
+        "InventoryForm.jsx": null,
+        "LeadForm.jsx": null,
+        "LoginForm.jsx": null,
+        "OrderForm.jsx": null,
+        "PaymentForm.jsx": null,
+        "PaymentModeForm.jsx": null,
+        "RegisterForm.jsx": null,
+        "ResetPasswordForm.jsx": null,
+        "TaxForm.jsx": null,
+        "UpdateEmail.jsx": null
+      },
+      "hooks": {
+        "useDebounce.jsx": null,
+        "useFetch.jsx": null,
+        "useLiveFeed.js": null,
+        "useMail.jsx": null,
+        "useNetwork.jsx": null,
+        "useOnFetch.jsx": null,
+        "useProposals.js": null,
+        "useResponsive.jsx": null,
+        "useTasks.js": null,
+        "useTimeoutFn.jsx": null
+      },
+      "layout": {
+        "AuthLayout": {
+          "index.jsx": null
+        },
+        "CrudLayout": {
+          "index.jsx": null
+        },
+        "DashboardLayout": {
+          "index.jsx": null
+        },
+        "DefaultLayout": {
+          "index.jsx": null
+        },
+        "ErpLayout": {
+          "index.jsx": null
+        },
+        "Footer": {
+          "index.jsx": null
+        },
+        "index.jsx": null,
+        "ProfileLayout": {
+          "index.jsx": null
+        },
+        "SettingsLayout": {
+          "index.jsx": null
+        }
+      },
+      "locale": {
+        "antdLocale.js": null,
+        "coreTranslation.js": null,
+        "Localization.jsx": null,
+        "translation": {
+          "en_us.js": null,
+          "otherTranslation.js": null,
+          "translation.js": null
+        },
+        "useLanguage.jsx": null
+      },
+      "logo-icon.svg": null,
+      "main.jsx": null,
+      "modules": {
+        "AuthModule": {
+          "index.jsx": null,
+          "SideContent.jsx": null
+        },
+        "CrudModule": {
+          "CrudModule.jsx": null
+        },
+        "DashboardModule": {
+          "components": {
+            "CustomerPreviewCard.jsx": null,
+            "PreviewCard.jsx": null,
+            "RecentTable": {
+              "index.jsx": null
+            },
+            "SummaryCard.jsx": null
+          },
+          "index.jsx": null
+        },
+        "ErpPanelModule": {
+          "CreateItem.jsx": null,
+          "DataTable.jsx": null,
+          "DeleteItem.jsx": null,
+          "index.jsx": null,
+          "ItemRow.jsx": null,
+          "ReadItem.jsx": null,
+          "SearchItem.jsx": null,
+          "UpdateItem.jsx": null
+        },
+        "InvoiceModule": {
+          "CreateInvoiceModule": {
+            "index.jsx": null
+          },
+          "Forms": {
+            "InvoiceForm.jsx": null
+          },
+          "InvoiceDataTableModule": {
+            "index.jsx": null
+          },
+          "ReadInvoiceModule": {
+            "index.jsx": null
+          },
+          "RecordPaymentModule": {
+            "components": {
+              "Payment.jsx": null,
+              "RecordPayment.jsx": null
+            },
+            "index.jsx": null
+          },
+          "UpdateInvoiceModule": {
+            "index.jsx": null
+          }
+        },
+        "PaymentModule": {
+          "PaymentDataTableModule": {
+            "index.jsx": null
+          },
+          "ReadPaymentModule": {
+            "components": {
+              "ReadItem.jsx": null
+            },
+            "index.jsx": null
+          },
+          "UpdatePaymentModule": {
+            "components": {
+              "Payment.jsx": null,
+              "UpdatePayment.jsx": null
+            },
+            "index.jsx": null
+          }
+        },
+        "ProfileModule": {
+          "components": {
+            "AdminInfo.jsx": null,
+            "PasswordModal.jsx": null,
+            "Profile.jsx": null,
+            "ProfileAdminForm.jsx": null,
+            "UpdateAdmin.jsx": null,
+            "UploadImg.jsx": null
+          },
+          "index.jsx": null
+        },
+        "QuoteModule": {
+          "CreateQuoteModule": {
+            "index.jsx": null
+          },
+          "Forms": {
+            "QuoteForm.jsx": null
+          },
+          "QuoteDataTableModule": {
+            "index.jsx": null
+          },
+          "ReadQuoteModule": {
+            "index.jsx": null
+          },
+          "UpdateQuoteModule": {
+            "index.jsx": null
+          }
+        },
+        "SettingModule": {
+          "CompanyLogoSettingsModule": {
+            "forms": {
+              "AppSettingForm.jsx": null
+            },
+            "index.jsx": null
+          },
+          "CompanySettingsModule": {
+            "index.jsx": null,
+            "SettingsForm.jsx": null
+          },
+          "components": {
+            "SetingsSection.jsx": null,
+            "UpdateSettingForm.jsx": null,
+            "UpdateSettingModule.jsx": null
+          },
+          "FinanceSettingsModule": {
+            "index.jsx": null,
+            "SettingsForm.jsx": null
+          },
+          "GeneralSettingsModule": {
+            "forms": {
+              "GeneralSettingForm.jsx": null
+            },
+            "index.jsx": null
+          },
+          "MoneyFormatSettingsModule": {
+            "index.jsx": null,
+            "SettingsForm.jsx": null
+          }
+        },
+        "sponsorModule": {
+          "sponsorCalander.jsx": null
+        }
+      },
+      "pages": {
+        "About.jsx": null,
+        "AdminSettings.jsx": null,
+        "AllurSpaceConsole.jsx": null,
+        "Artists.jsx": null,
+        "BusinessContacts.jsx": null,
+        "BusinessProfile.jsx": null,
+        "Calendar.css": null,
+        "Calendar.jsx": null,
+        "columns.jsx": null,
+        "Customer": {
+          "config.js": null,
+          "index.jsx": null
+        },
+        "Dashboard-v1.jsx": null,
+        "Dashboard-v10.jsx": null,
+        "Dashboard-v11.jsx": null,
+        "Dashboard-v12.jsx": null,
+        "Dashboard-v13.jsx": null,
+        "Dashboard-v14.jsx": null,
+        "Dashboard-v15.jsx": null,
+        "Dashboard-v16.jsx": null,
+        "Dashboard-v17.jsx": null,
+        "Dashboard-v18.jsx": null,
+        "Dashboard-v19.jsx": null,
+        "Dashboard-v2.jsx": null,
+        "Dashboard-v20.jsx": null,
+        "Dashboard-v21.jsx": null,
+        "Dashboard-v22.jsx": null,
+        "Dashboard-v23.jsx": null,
+        "Dashboard-v24.jsx": null,
+        "Dashboard-v25.jsx": null,
+        "Dashboard-v26.jsx": null,
+        "Dashboard-v27.jsx": null,
+        "Dashboard-v28.jsx": null,
+        "Dashboard-v29.jsx": null,
+        "Dashboard-v3.jsx": null,
+        "Dashboard-v30.jsx": null,
+        "Dashboard-v31.jsx": null,
+        "Dashboard-v32.jsx": null,
+        "Dashboard-v33.jsx": null,
+        "Dashboard-v34.jsx": null,
+        "Dashboard-v35.jsx": null,
+        "Dashboard-v36.jsx": null,
+        "Dashboard-v37.jsx": null,
+        "Dashboard-v38.jsx": null,
+        "Dashboard-v39.jsx": null,
+        "Dashboard-v4.jsx": null,
+        "Dashboard-v40.jsx": null,
+        "Dashboard-v41.jsx": null,
+        "Dashboard-v42.jsx": null,
+        "Dashboard-v43.jsx": null,
+        "Dashboard-v44.jsx": null,
+        "Dashboard-v45.jsx": null,
+        "Dashboard-v46.jsx": null,
+        "Dashboard-v47.jsx": null,
+        "Dashboard-v48.jsx": null,
+        "Dashboard-v49.jsx": null,
+        "Dashboard-v5.jsx": null,
+        "Dashboard-v50.jsx": null,
+        "Dashboard-v51.jsx": null,
+        "Dashboard-v52.jsx": null,
+        "Dashboard-v53.jsx": null,
+        "Dashboard-v54.jsx": null,
+        "Dashboard-v55.jsx": null,
+        "Dashboard-v56.jsx": null,
+        "Dashboard-v57.jsx": null,
+        "Dashboard-v58.jsx": null,
+        "Dashboard-v59.jsx": null,
+        "Dashboard-v6.jsx": null,
+        "Dashboard-v60.jsx": null,
+        "Dashboard-v61.jsx": null,
+        "Dashboard-v62.jsx": null,
+        "Dashboard-v63.jsx": null,
+        "Dashboard-v64.jsx": null,
+        "Dashboard-v65.jsx": null,
+        "Dashboard-v66.jsx": null,
+        "Dashboard-v67.jsx": null,
+        "Dashboard-v68.jsx": null,
+        "Dashboard-v69.jsx": null,
+        "Dashboard-v7.jsx": null,
+        "Dashboard-v70.jsx": null,
+        "Dashboard-v71.jsx": null,
+        "Dashboard-v72.jsx": null,
+        "Dashboard-v73.jsx": null,
+        "Dashboard-v74.jsx": null,
+        "Dashboard-v75.jsx": null,
+        "Dashboard-v76.jsx": null,
+        "Dashboard-v77.jsx": null,
+        "Dashboard-v78.jsx": null,
+        "Dashboard-v79.jsx": null,
+        "Dashboard-v8.jsx": null,
+        "Dashboard-v80.jsx": null,
+        "Dashboard-v81.jsx": null,
+        "Dashboard-v82.jsx": null,
+        "Dashboard-v83.jsx": null,
+        "Dashboard-v84.jsx": null,
+        "Dashboard-v85.jsx": null,
+        "Dashboard-v86.jsx": null,
+        "Dashboard-v87.jsx": null,
+        "Dashboard-v88.jsx": null,
+        "Dashboard-v89.jsx": null,
+        "Dashboard-v9.jsx": null,
+        "Dashboard.jsx": null,
+        "DataTable.jsx": null,
+        "EmailModal.jsx": null,
+        "EmployeeDash.jsx": null,
+        "EmployeeLog-v002.jsx": null,
+        "EmployeeLog-v036.jsx": null,
+        "EmployeeLog-v073.jsx": null,
+        "EmployeeLog-v1.jsx": null,
+        "EmployeeLog-v10.jsx": null,
+        "EmployeeLog-v100.jsx": null,
+        "EmployeeLog-v101.jsx": null,
+        "EmployeeLog-v102.jsx": null,
+        "EmployeeLog-v103.jsx": null,
+        "EmployeeLog-v104.jsx": null,
+        "EmployeeLog-v105.jsx": null,
+        "EmployeeLog-v106.jsx": null,
+        "EmployeeLog-v107.jsx": null,
+        "EmployeeLog-v108.jsx": null,
+        "EmployeeLog-v109.jsx": null,
+        "EmployeeLog-v11.jsx": null,
+        "EmployeeLog-v110.jsx": null,
+        "EmployeeLog-v111.jsx": null,
+        "EmployeeLog-v112.jsx": null,
+        "EmployeeLog-v113.jsx": null,
+        "EmployeeLog-v114.jsx": null,
+        "EmployeeLog-v12.jsx": null,
+        "EmployeeLog-v13.jsx": null,
+        "EmployeeLog-v14.jsx": null,
+        "EmployeeLog-v143.jsx": null,
+        "EmployeeLog-v15.jsx": null,
+        "EmployeeLog-v152.jsx": null,
+        "EmployeeLog-v16.jsx": null,
+        "EmployeeLog-v17.jsx": null,
+        "EmployeeLog-v18.jsx": null,
+        "EmployeeLog-v19.jsx": null,
+        "EmployeeLog-v2.jsx": null,
+        "EmployeeLog-v20.jsx": null,
+        "EmployeeLog-v21.jsx": null,
+        "EmployeeLog-v22.jsx": null,
+        "EmployeeLog-v23.jsx": null,
+        "EmployeeLog-v24.jsx": null,
+        "EmployeeLog-v25.jsx": null,
+        "EmployeeLog-v26.jsx": null,
+        "EmployeeLog-v27.jsx": null,
+        "EmployeeLog-v28.jsx": null,
+        "EmployeeLog-v29.jsx": null,
+        "EmployeeLog-v3.jsx": null,
+        "EmployeeLog-v30.jsx": null,
+        "EmployeeLog-v31.jsx": null,
+        "EmployeeLog-v32.jsx": null,
+        "EmployeeLog-v320.jsx": null,
+        "EmployeeLog-v33.jsx": null,
+        "EmployeeLog-v34.jsx": null,
+        "EmployeeLog-v35.jsx": null,
+        "EmployeeLog-v36.jsx": null,
+        "EmployeeLog-v367.jsx": null,
+        "EmployeeLog-v37.jsx": null,
+        "EmployeeLog-v38.jsx": null,
+        "EmployeeLog-v39.jsx": null,
+        "EmployeeLog-v4.jsx": null,
+        "EmployeeLog-v40.jsx": null,
+        "EmployeeLog-v407.jsx": null,
+        "EmployeeLog-v408.jsx": null,
+        "EmployeeLog-v41.jsx": null,
+        "EmployeeLog-v416.jsx": null,
+        "EmployeeLog-v42.jsx": null,
+        "EmployeeLog-v43.jsx": null,
+        "EmployeeLog-v44.jsx": null,
+        "EmployeeLog-v45.jsx": null,
+        "EmployeeLog-v46.jsx": null,
+        "EmployeeLog-v463.jsx": null,
+        "EmployeeLog-v47.jsx": null,
+        "EmployeeLog-v48.jsx": null,
+        "EmployeeLog-v480.jsx": null,
+        "EmployeeLog-v49.jsx": null,
+        "EmployeeLog-v5.jsx": null,
+        "EmployeeLog-v50.jsx": null,
+        "EmployeeLog-v505.jsx": null,
+        "EmployeeLog-v51.jsx": null,
+        "EmployeeLog-v52.jsx": null,
+        "EmployeeLog-v53.jsx": null,
+        "EmployeeLog-v54.jsx": null,
+        "EmployeeLog-v55.jsx": null,
+        "EmployeeLog-v56.jsx": null,
+        "EmployeeLog-v564.jsx": null,
+        "EmployeeLog-v57.jsx": null,
+        "EmployeeLog-v58.jsx": null,
+        "EmployeeLog-v59.jsx": null,
+        "EmployeeLog-v6.jsx": null,
+        "EmployeeLog-v60.jsx": null,
+        "EmployeeLog-v61.jsx": null,
+        "EmployeeLog-v62.jsx": null,
+        "EmployeeLog-v63.jsx": null,
+        "EmployeeLog-v64.jsx": null,
+        "EmployeeLog-v65.jsx": null,
+        "EmployeeLog-v66.jsx": null,
+        "EmployeeLog-v67.jsx": null,
+        "EmployeeLog-v68.jsx": null,
+        "EmployeeLog-v69.jsx": null,
+        "EmployeeLog-v693.jsx": null,
+        "EmployeeLog-v7.jsx": null,
+        "EmployeeLog-v70.jsx": null,
+        "EmployeeLog-v71.jsx": null,
+        "EmployeeLog-v72.jsx": null,
+        "EmployeeLog-v73.jsx": null,
+        "EmployeeLog-v737.jsx": null,
+        "EmployeeLog-v74.jsx": null,
+        "EmployeeLog-v744.jsx": null,
+        "EmployeeLog-v75.jsx": null,
+        "EmployeeLog-v76.jsx": null,
+        "EmployeeLog-v77.jsx": null,
+        "EmployeeLog-v78.jsx": null,
+        "EmployeeLog-v782.jsx": null,
+        "EmployeeLog-v79.jsx": null,
+        "EmployeeLog-v8.jsx": null,
+        "EmployeeLog-v80.jsx": null,
+        "EmployeeLog-v81.jsx": null,
+        "EmployeeLog-v82.jsx": null,
+        "EmployeeLog-v823.jsx": null,
+        "EmployeeLog-v83.jsx": null,
+        "EmployeeLog-v830.jsx": null,
+        "EmployeeLog-v84.jsx": null,
+        "EmployeeLog-v85.jsx": null,
+        "EmployeeLog-v86.jsx": null,
+        "EmployeeLog-v87.jsx": null,
+        "EmployeeLog-v870.jsx": null,
+        "EmployeeLog-v88.jsx": null,
+        "EmployeeLog-v89.jsx": null,
+        "EmployeeLog-v896.jsx": null,
+        "EmployeeLog-v9.jsx": null,
+        "EmployeeLog-v90.jsx": null,
+        "EmployeeLog-v91.jsx": null,
+        "EmployeeLog-v92.jsx": null,
+        "EmployeeLog-v93.jsx": null,
+        "EmployeeLog-v94.jsx": null,
+        "EmployeeLog-v948.jsx": null,
+        "EmployeeLog-v95.jsx": null,
+        "EmployeeLog-v96.jsx": null,
+        "EmployeeLog-v97.jsx": null,
+        "EmployeeLog-v979.jsx": null,
+        "EmployeeLog-v98.jsx": null,
+        "EmployeeLog-v99.jsx": null,
+        "EmployeeLog.jsx": null,
+        "EventModal.jsx": null,
+        "ForgetPassword.jsx": null,
+        "GrokUI.jsx": null,
+        "handlers.js": null,
+        "Invoice": {
+          "index.jsx": null,
+          "InvoiceCreate.jsx": null,
+          "InvoiceRead.jsx": null,
+          "InvoiceRecordPayment.jsx": null,
+          "InvoiceUpdate.jsx": null
+        },
+        "Login-v1.jsx": null,
+        "Login-v10.jsx": null,
+        "Login-v100.jsx": null,
+        "Login-v101.jsx": null,
+        "Login-v102.jsx": null,
+        "Login-v103.jsx": null,
+        "Login-v104.jsx": null,
+        "Login-v105.jsx": null,
+        "Login-v106.jsx": null,
+        "Login-v107.jsx": null,
+        "Login-v108.jsx": null,
+        "Login-v109.jsx": null,
+        "Login-v11.jsx": null,
+        "Login-v110.jsx": null,
+        "Login-v111.jsx": null,
+        "Login-v112.jsx": null,
+        "Login-v113.jsx": null,
+        "Login-v114.jsx": null,
+        "Login-v115.jsx": null,
+        "Login-v12.jsx": null,
+        "Login-v13.jsx": null,
+        "Login-v14.jsx": null,
+        "Login-v15.jsx": null,
+        "Login-v16.jsx": null,
+        "Login-v17.jsx": null,
+        "Login-v18.jsx": null,
+        "Login-v19.jsx": null,
+        "Login-v2.jsx": null,
+        "Login-v20.jsx": null,
+        "Login-v21.jsx": null,
+        "Login-v22.jsx": null,
+        "Login-v23.jsx": null,
+        "Login-v24.jsx": null,
+        "Login-v25.jsx": null,
+        "Login-v26.jsx": null,
+        "Login-v27.jsx": null,
+        "Login-v28.jsx": null,
+        "Login-v29.jsx": null,
+        "Login-v3.jsx": null,
+        "Login-v30.jsx": null,
+        "Login-v31.jsx": null,
+        "Login-v32.jsx": null,
+        "Login-v33.jsx": null,
+        "Login-v34.jsx": null,
+        "Login-v35.jsx": null,
+        "Login-v36.jsx": null,
+        "Login-v37.jsx": null,
+        "Login-v38.jsx": null,
+        "Login-v39.jsx": null,
+        "Login-v4.jsx": null,
+        "Login-v40.jsx": null,
+        "Login-v41.jsx": null,
+        "Login-v42.jsx": null,
+        "Login-v43.jsx": null,
+        "Login-v44.jsx": null,
+        "Login-v45.jsx": null,
+        "Login-v46.jsx": null,
+        "Login-v47.jsx": null,
+        "Login-v48.jsx": null,
+        "Login-v49.jsx": null,
+        "Login-v5.jsx": null,
+        "Login-v50.jsx": null,
+        "Login-v51.jsx": null,
+        "Login-v52.jsx": null,
+        "Login-v53.jsx": null,
+        "Login-v54.jsx": null,
+        "Login-v55.jsx": null,
+        "Login-v56.jsx": null,
+        "Login-v57.jsx": null,
+        "Login-v58.jsx": null,
+        "Login-v59.jsx": null,
+        "Login-v6.jsx": null,
+        "Login-v60.jsx": null,
+        "Login-v61.jsx": null,
+        "Login-v62.jsx": null,
+        "Login-v63.jsx": null,
+        "Login-v64.jsx": null,
+        "Login-v65.jsx": null,
+        "Login-v66.jsx": null,
+        "Login-v67.jsx": null,
+        "Login-v68.jsx": null,
+        "Login-v69.jsx": null,
+        "Login-v7.jsx": null,
+        "Login-v70.jsx": null,
+        "Login-v71.jsx": null,
+        "Login-v72.jsx": null,
+        "Login-v73.jsx": null,
+        "Login-v74.jsx": null,
+        "Login-v75.jsx": null,
+        "Login-v76.jsx": null,
+        "Login-v77.jsx": null,
+        "Login-v78.jsx": null,
+        "Login-v79.jsx": null,
+        "Login-v8.jsx": null,
+        "Login-v80.jsx": null,
+        "Login-v81.jsx": null,
+        "Login-v82.jsx": null,
+        "Login-v83.jsx": null,
+        "Login-v84.jsx": null,
+        "Login-v85.jsx": null,
+        "Login-v86.jsx": null,
+        "Login-v87.jsx": null,
+        "Login-v88.jsx": null,
+        "Login-v89.jsx": null,
+        "Login-v9.jsx": null,
+        "Login-v90.jsx": null,
+        "Login-v91.jsx": null,
+        "Login-v92.jsx": null,
+        "Login-v93.jsx": null,
+        "Login-v94.jsx": null,
+        "Login-v95.jsx": null,
+        "Login-v96.jsx": null,
+        "Login-v97.jsx": null,
+        "Login-v98.jsx": null,
+        "Login-v99.jsx": null,
+        "Login.jsx": null,
+        "Logout.jsx": null,
+        "NotFound.jsx": null,
+        "Payment": {
+          "index.jsx": null,
+          "PaymentRead.jsx": null,
+          "PaymentUpdate.jsx": null
+        },
+        "PaymentMode": {
+          "index.jsx": null
+        },
+        "PendingNotifications.jsx": null,
+        "Profile.jsx": null,
+        "Quote": {
+          "index.jsx": null,
+          "QuoteCreate.jsx": null,
+          "QuoteRead.jsx": null,
+          "QuoteUpdate.jsx": null
+        },
+        "record._id": null,
+        "ResetPassword.jsx": null,
+        "Settings": {
+          "CompanyLogoSettings.jsx": null,
+          "CompanySettings.jsx": null,
+          "FinanceSettings.jsx": null,
+          "GeneralSettings.jsx": null,
+          "MoneyFormatSettings.jsx": null,
+          "Settings.jsx": null
+        },
+        "Settings-v1.jsx": null,
+        "Settings-v10.jsx": null,
+        "Settings-v11.jsx": null,
+        "Settings-v12.jsx": null,
+        "Settings-v13.jsx": null,
+        "Settings-v14.jsx": null,
+        "Settings-v15.jsx": null,
+        "Settings-v16.jsx": null,
+        "Settings-v17.jsx": null,
+        "Settings-v18.jsx": null,
+        "Settings-v19.jsx": null,
+        "Settings-v2.jsx": null,
+        "Settings-v20.jsx": null,
+        "Settings-v21.jsx": null,
+        "Settings-v22.jsx": null,
+        "Settings-v23.jsx": null,
+        "Settings-v24.jsx": null,
+        "Settings-v25.jsx": null,
+        "Settings-v26.jsx": null,
+        "Settings-v27.jsx": null,
+        "Settings-v28.jsx": null,
+        "Settings-v29.jsx": null,
+        "Settings-v3.jsx": null,
+        "Settings-v30.jsx": null,
+        "Settings-v31.jsx": null,
+        "Settings-v32.jsx": null,
+        "Settings-v33.jsx": null,
+        "Settings-v34.jsx": null,
+        "Settings-v35.jsx": null,
+        "Settings-v36.jsx": null,
+        "Settings-v37.jsx": null,
+        "Settings-v38.jsx": null,
+        "Settings-v39.jsx": null,
+        "Settings-v4.jsx": null,
+        "Settings-v40.jsx": null,
+        "Settings-v41.jsx": null,
+        "Settings-v42.jsx": null,
+        "Settings-v43.jsx": null,
+        "Settings-v44.jsx": null,
+        "Settings-v45.jsx": null,
+        "Settings-v46.jsx": null,
+        "Settings-v47.jsx": null,
+        "Settings-v48.jsx": null,
+        "Settings-v49.jsx": null,
+        "Settings-v5.jsx": null,
+        "Settings-v50.jsx": null,
+        "Settings-v51.jsx": null,
+        "Settings-v52.jsx": null,
+        "Settings-v53.jsx": null,
+        "Settings-v54.jsx": null,
+        "Settings-v55.jsx": null,
+        "Settings-v56.jsx": null,
+        "Settings-v57.jsx": null,
+        "Settings-v58.jsx": null,
+        "Settings-v59.jsx": null,
+        "Settings-v6.jsx": null,
+        "Settings-v60.jsx": null,
+        "Settings-v61.jsx": null,
+        "Settings-v62.jsx": null,
+        "Settings-v63.jsx": null,
+        "Settings-v64.jsx": null,
+        "Settings-v65.jsx": null,
+        "Settings-v66.jsx": null,
+        "Settings-v67.jsx": null,
+        "Settings-v68.jsx": null,
+        "Settings-v69.jsx": null,
+        "Settings-v7.jsx": null,
+        "Settings-v70.jsx": null,
+        "Settings-v71.jsx": null,
+        "Settings-v72.jsx": null,
+        "Settings-v73.jsx": null,
+        "Settings-v74.jsx": null,
+        "Settings-v75.jsx": null,
+        "Settings-v76.jsx": null,
+        "Settings-v77.jsx": null,
+        "Settings-v78.jsx": null,
+        "Settings-v79.jsx": null,
+        "Settings-v8.jsx": null,
+        "Settings-v80.jsx": null,
+        "Settings-v81.jsx": null,
+        "Settings-v82.jsx": null,
+        "Settings-v83.jsx": null,
+        "Settings-v84.jsx": null,
+        "Settings-v85.jsx": null,
+        "Settings-v86.jsx": null,
+        "Settings-v87.jsx": null,
+        "Settings-v88.jsx": null,
+        "Settings-v89.jsx": null,
+        "Settings-v9.jsx": null,
+        "Settings.jsx": null,
+        "SponsorHub.jsx": null,
+        "SponsorManagement.jsx": null,
+        "SponsorModal.jsx": null,
+        "SponsorOverview.jsx": null,
+        "SponsorProfile-v1.jsx": null,
+        "SponsorProfile-v10.jsx": null,
+        "SponsorProfile-v11.jsx": null,
+        "SponsorProfile-v12.jsx": null,
+        "SponsorProfile-v13.jsx": null,
+        "SponsorProfile-v14.jsx": null,
+        "SponsorProfile-v15.jsx": null,
+        "SponsorProfile-v16.jsx": null,
+        "SponsorProfile-v17.jsx": null,
+        "SponsorProfile-v18.jsx": null,
+        "SponsorProfile-v19.jsx": null,
+        "SponsorProfile-v2.jsx": null,
+        "SponsorProfile-v20.jsx": null,
+        "SponsorProfile-v21.jsx": null,
+        "SponsorProfile-v22.jsx": null,
+        "SponsorProfile-v23.jsx": null,
+        "SponsorProfile-v24.jsx": null,
+        "SponsorProfile-v25.jsx": null,
+        "SponsorProfile-v26.jsx": null,
+        "SponsorProfile-v27.jsx": null,
+        "SponsorProfile-v28.jsx": null,
+        "SponsorProfile-v29.jsx": null,
+        "SponsorProfile-v3.jsx": null,
+        "SponsorProfile-v30.jsx": null,
+        "SponsorProfile-v31.jsx": null,
+        "SponsorProfile-v32.jsx": null,
+        "SponsorProfile-v33.jsx": null,
+        "SponsorProfile-v34.jsx": null,
+        "SponsorProfile-v35.jsx": null,
+        "SponsorProfile-v36.jsx": null,
+        "SponsorProfile-v37.jsx": null,
+        "SponsorProfile-v38.jsx": null,
+        "SponsorProfile-v39.jsx": null,
+        "SponsorProfile-v4.jsx": null,
+        "SponsorProfile-v40.jsx": null,
+        "SponsorProfile-v41.jsx": null,
+        "SponsorProfile-v42.jsx": null,
+        "SponsorProfile-v43.jsx": null,
+        "SponsorProfile-v44.jsx": null,
+        "SponsorProfile-v45.jsx": null,
+        "SponsorProfile-v46.jsx": null,
+        "SponsorProfile-v47.jsx": null,
+        "SponsorProfile-v48.jsx": null,
+        "SponsorProfile-v49.jsx": null,
+        "SponsorProfile-v5.jsx": null,
+        "SponsorProfile-v50.jsx": null,
+        "SponsorProfile-v51.jsx": null,
+        "SponsorProfile-v52.jsx": null,
+        "SponsorProfile-v53.jsx": null,
+        "SponsorProfile-v54.jsx": null,
+        "SponsorProfile-v55.jsx": null,
+        "SponsorProfile-v56.jsx": null,
+        "SponsorProfile-v57.jsx": null,
+        "SponsorProfile-v58.jsx": null,
+        "SponsorProfile-v59.jsx": null,
+        "SponsorProfile-v6.jsx": null,
+        "SponsorProfile-v60.jsx": null,
+        "SponsorProfile-v61.jsx": null,
+        "SponsorProfile-v62.jsx": null,
+        "SponsorProfile-v63.jsx": null,
+        "SponsorProfile-v64.jsx": null,
+        "SponsorProfile-v65.jsx": null,
+        "SponsorProfile-v66.jsx": null,
+        "SponsorProfile-v67.jsx": null,
+        "SponsorProfile-v68.jsx": null,
+        "SponsorProfile-v69.jsx": null,
+        "SponsorProfile-v7.jsx": null,
+        "SponsorProfile-v70.jsx": null,
+        "SponsorProfile-v71.jsx": null,
+        "SponsorProfile-v72.jsx": null,
+        "SponsorProfile-v73.jsx": null,
+        "SponsorProfile-v74.jsx": null,
+        "SponsorProfile-v75.jsx": null,
+        "SponsorProfile-v76.jsx": null,
+        "SponsorProfile-v77.jsx": null,
+        "SponsorProfile-v78.jsx": null,
+        "SponsorProfile-v79.jsx": null,
+        "SponsorProfile-v8.jsx": null,
+        "SponsorProfile-v80.jsx": null,
+        "SponsorProfile-v81.jsx": null,
+        "SponsorProfile-v82.jsx": null,
+        "SponsorProfile-v83.jsx": null,
+        "SponsorProfile-v84.jsx": null,
+        "SponsorProfile-v85.jsx": null,
+        "SponsorProfile-v86.jsx": null,
+        "SponsorProfile-v87.jsx": null,
+        "SponsorProfile-v88.jsx": null,
+        "SponsorProfile-v89.jsx": null,
+        "SponsorProfile-v9.jsx": null,
+        "SponsorProfile.jsx": null,
+        "Sponsors.jsx": null,
+        "SponsorSchedule.jsx": null,
+        "Taxes": {
+          "index.jsx": null
+        },
+        "useSponsorDashboard.js": null,
+        "utils.js": null
+      },
+      "redux": {
+        "adavancedCrud": {
+          "actions.js": null,
+          "index.js": null,
+          "reducer.js": null,
+          "selectors.js": null,
+          "types.js": null
+        },
+        "auth": {
+          "actions.js": null,
+          "index.js": null,
+          "reducer.js": null,
+          "selectors.js": null,
+          "types.js": null
+        },
+        "crud": {
+          "actions.js": null,
+          "index.js": null,
+          "reducer.js": null,
+          "selectors.js": null,
+          "types.js": null
+        },
+        "erp": {
+          "actions.js": null,
+          "index.js": null,
+          "reducer.js": null,
+          "selectors.js": null,
+          "types.js": null
+        },
+        "grokSlice.js": null,
+        "rootReducer.js": null,
+        "settings": {
+          "actions.js": null,
+          "index.js": null,
+          "reducer.js": null,
+          "selectors.js": null,
+          "types.js": null
+        },
+        "sponsors": {
+          "actions.js": null,
+          "actionTypes.js": null,
+          "reducer.js": null,
+          "types.js": null
+        },
+        "store.js": null,
+        "storePersist.js": null
+      },
+      "request": {
+        "checkImage.js": null,
+        "codeMessage.js": null,
+        "errorHandler.js": null,
+        "index.js": null,
+        "request.js": null,
+        "sponsorRequests.js": null,
+        "successHandler.js": null
+      },
+      "RootApp.jsx": null,
+      "router": {
+        "AppRouter.jsx": null,
+        "AuthRouter.jsx": null,
+        "routes.jsx": null
+      },
+      "settings": {
+        "index.jsx": null,
+        "useDate.jsx": null,
+        "useMoney.jsx": null
+      },
+      "style": {
+        "app.css": null,
+        "global.css": null,
+        "images": {
+          "checklist.svg": null,
+          "fitbit-gray.svg": null,
+          "flow-xo-gray.svg": null,
+          "gitlab-gray.svg": null,
+          "idurar-crm-erp.svg": null,
+          "layar-gray.svg": null,
+          "logo-icon.png": null,
+          "logo-icon.svg": null,
+          "logo-menu.png": null,
+          "logo-text.png": null,
+          "logo-text.svg": null,
+          "logo.png": null,
+          "logo.svg": null,
+          "logo1.png": null,
+          "logo2.png": null,
+          "logo3.png": null,
+          "logo4.png": null,
+          "photo.png": null
+        },
+        "partials": {
+          "auth.css": null,
+          "collapseBox.css": null,
+          "core.css": null,
+          "customAntd.css": null,
+          "erp.css": null,
+          "header.css": null,
+          "layout.css": null,
+          "navigation.css": null,
+          "rest.css": null,
+          "sidePanel.css": null,
+          "transition.css": null
+        }
+      },
+      "temp": {
+        "EmployeeLog-v027.jsx": null,
+        "EmployeeLog-v031.jsx": null,
+        "EmployeeLog-v042.jsx": null,
+        "EmployeeLog-v160.jsx": null,
+        "EmployeeLog-v223.jsx": null,
+        "EmployeeLog-v255.jsx": null,
+        "EmployeeLog-v263.jsx": null,
+        "EmployeeLog-v287.jsx": null,
+        "EmployeeLog-v377.jsx": null,
+        "EmployeeLog-v415.jsx": null,
+        "EmployeeLog-v491.jsx": null,
+        "EmployeeLog-v498.jsx": null,
+        "EmployeeLog-v531.jsx": null,
+        "EmployeeLog-v589.jsx": null,
+        "EmployeeLog-v593.jsx": null,
+        "EmployeeLog-v637.jsx": null,
+        "EmployeeLog-v662.jsx": null,
+        "EmployeeLog-v681.jsx": null,
+        "EmployeeLog-v709.jsx": null,
+        "EmployeeLog-v720.jsx": null,
+        "EmployeeLog-v739.jsx": null,
+        "EmployeeLog-v778.jsx": null,
+        "EmployeeLog-v786.jsx": null,
+        "EmployeeLog-v870.jsx": null,
+        "EmployeeLog-v900.jsx": null,
+        "EmployeeLog-v922.jsx": null,
+        "EmployeeLog-v987.jsx": null,
+        "EmployeeLog.jsx": null
+      },
+      "utils": {
+        "ai.js": null,
+        "calculate.js": null,
+        "color.js": null,
+        "countryList.js": null,
+        "currencyList.js": null,
+        "dataStructure.jsx": null,
+        "debug.js": null,
+        "helpers.js": null,
+        "isBrowser.js": null,
+        "statusTagColor.js": null,
+        "tagColor.js": null,
+        "valueType.js": null
+      }
+    },
+    "temp.env": null,
+    "test-results": {
+      ".last-run.json": null
+    },
+    "vite.config.js": null
+  },
+  "grok.log": null,
+  "grok.log.1744323895533.gz": null,
+  "grok_report.json": null,
+  "idurar-crm-erp.svg": null,
+  "image.png": null,
+  "INSTALLATION-INSTRUCTIONS.md": null,
+  "LICENSE": null,
+  "node_modules": null,
+  "package-lock.json": null,
+  "package.json": null,
+  "playwright-report": {
+    "data": {
+      "076367f07013da93a188d5915f62eda26bad51ab.png": null,
+      "51812bfcc35257bbaeb03053616262b488f5b13c.webm": null,
+      "61bb5810459f06a3d67ccd7c7baec105de2cd6e3.webm": null,
+      "6ac103b3208268fe8bf69b7b601754567cc4ce70.webm": null,
+      "855b773643e9d07937bc5cf06663488d231f5f0f.webm": null,
+      "bd8c996b771cfea92c3c3be02bac8ee367370c7f.png": null,
+      "beae792fed51285c77082a2ccc2f6ec44e5371b2.webm": null,
+      "cb1383514480c2a8b334055e2be05e9e56528a25.webm": null,
+      "d2879f9d205c786b047d7447d1280dd1358e6d75.png": null
+    },
+    "index.html": null
+  },
+  "playwright.config.js": null,
+  "project_structure.txt": null,
+  "project_structure_focused.txt": null,
+  "README.md": null,
+  "SECURITY.md": null,
+  "site-structure.json": null,
+  "test-results": {
+    ".last-run.json": null,
+    "grok-Grok-edit-workflow-chromium": {
+      "test-failed-1.png": null,
+      "video.webm": null
+    },
+    "grok-Grok-edit-workflow-firefox": {
+      "test-failed-1.png": null,
+      "video.webm": null
+    },
+    "grok-Grok-edit-workflow-webkit": {
+      "test-failed-1.png": null,
+      "video.webm": null
+    },
+    "grok-SponsorHub-loads-chromium": {
+      "test-failed-1.png": null,
+      "video.webm": null
+    },
+    "grok-SponsorHub-loads-firefox": {
+      "test-failed-1.png": null,
+      "video.webm": null
+    },
+    "grok-SponsorHub-loads-webkit": {
+      "test-failed-1.png": null,
+      "video.webm": null
+    }
+  },
+  "tests": {
+    "employeelog-v031.spec.js": null,
+    "employeelog-v042.spec.js": null,
+    "employeelog-v1.spec.js": null,
+    "employeelog-v152.spec.js": null,
+    "employeelog-v2.spec.js": null,
+    "employeelog-v3.spec.js": null,
+    "employeelog-v320.spec.js": null,
+    "employeelog-v4.spec.js": null,
+    "employeelog-v408.spec.js": null,
+    "employeelog-v5.spec.js": null,
+    "employeelog-v564.spec.js": null,
+    "employeelog-v589.spec.js": null,
+    "employeelog-v6.spec.js": null,
+    "employeelog-v693.spec.js": null,
+    "employeelog-v7.spec.js": null,
+    "employeelog-v737.spec.js": null,
+    "employeelog-v8.spec.js": null,
+    "employeelog-v870.spec.js": null,
+    "employeelog-v979.spec.js": null,
+    "employeelog-v987.spec.js": null,
+    "employeelog.spec.js": null,
+    "example.spec.js": null,
+    "grok.test.js": null
+  },
+  "tests-examples": {
+    "demo-todo-app.spec.js": null
+  },
+  "TEST_LOG.md": null
+}

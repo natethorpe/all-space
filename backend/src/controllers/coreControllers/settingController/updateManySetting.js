@@ -1,12 +1,34 @@
-const mongoose = require('mongoose');
+/*
+ * Purpose: Updates multiple settings in the Setting collection via bulk write.
+ * Dependencies: mongoose
+ * Notes:
+ *   - Uses 'Setting' model (singular) as defined in db.js.
+ *   - Grok Programming Machine: Read this file to log bulk updates; update notes with operation outcomes.
+ *   - Nate & Grok: Reevaluate for future updates:
+ *     - Add transaction support for atomic updates.
+ *     - Optimize with bulkWrite options (e.g., ordered: false).
+ * Change Log:
+ *   - 04/08/2025: Fixed model name to 'Setting' (Chat Line 5000-ish).
+ *     - Why: MissingSchemaError due to 'Settings' mismatch (User logs, 20:41 UTC).
+ *     - How: Changed 'Settings' to 'Setting'.
+ *     - Test: npm start, hit /api/settings/updateManySetting with { "settings": [{ "settingKey": "test", "settingValue": "value" }] }.
+ */
 
-const Model = mongoose.model('Setting');
+const mongoose = require('mongoose');
+const Setting = mongoose.model('Setting'); // Changed from 'Settings'
 
 const updateManySetting = async (req, res) => {
-  // req/body = [{settingKey:"",settingValue}]
   let settingsHasError = false;
   const updateDataArray = [];
   const { settings } = req.body;
+
+  if (!settings || !Array.isArray(settings) || settings.length === 0) {
+    return res.status(202).json({
+      success: false,
+      result: null,
+      message: 'No settings provided',
+    });
+  }
 
   for (const setting of settings) {
     if (!setting.hasOwnProperty('settingKey') || !setting.hasOwnProperty('settingValue')) {
@@ -15,22 +37,14 @@ const updateManySetting = async (req, res) => {
     }
 
     const { settingKey, settingValue } = setting;
-
     updateDataArray.push({
       updateOne: {
-        filter: { settingKey: settingKey },
-        update: { settingValue: settingValue },
+        filter: { settingKey },
+        update: { settingValue },
       },
     });
   }
 
-  if (updateDataArray.length === 0) {
-    return res.status(202).json({
-      success: false,
-      result: null,
-      message: 'No settings provided ',
-    });
-  }
   if (settingsHasError) {
     return res.status(202).json({
       success: false,
@@ -38,19 +52,20 @@ const updateManySetting = async (req, res) => {
       message: 'Settings provided has Error',
     });
   }
-  const result = await Model.bulkWrite(updateDataArray);
+
+  const result = await Setting.bulkWrite(updateDataArray);
 
   if (!result || result.nMatched < 1) {
     return res.status(404).json({
       success: false,
       result: null,
-      message: 'No settings found by to update',
+      message: 'No settings found to update',
     });
   } else {
     return res.status(200).json({
       success: true,
       result: [],
-      message: 'we update all settings',
+      message: 'We updated all settings',
     });
   }
 };

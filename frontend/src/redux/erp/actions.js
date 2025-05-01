@@ -1,5 +1,7 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\src\redux\erp\actions.js
+
 import * as actionTypes from './types';
-import { request } from '@/request';
+import request from '@/request'; // Changed to default import
 
 export const erp = {
   resetState: () => (dispatch) => {
@@ -182,7 +184,6 @@ export const erp = {
         });
       }
     },
-
   delete:
     ({ entity, id }) =>
     async (dispatch) => {
@@ -212,7 +213,6 @@ export const erp = {
         });
       }
     },
-
   search:
     ({ entity, options }) =>
     async (dispatch) => {
@@ -238,7 +238,6 @@ export const erp = {
         });
       }
     },
-
   summary:
     ({ entity, options }) =>
     async (dispatch) => {
@@ -264,7 +263,6 @@ export const erp = {
         });
       }
     },
-
   mail:
     ({ entity, jsonData }) =>
     async (dispatch) => {
@@ -290,7 +288,6 @@ export const erp = {
         });
       }
     },
-
   convert:
     ({ entity, id }) =>
     async () => {

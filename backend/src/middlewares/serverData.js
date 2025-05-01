@@ -1,3 +1,4 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\middlewares\serverData.js
 const mongoose = require('mongoose');
 exports.getData = ({ model }) => {
   const Model = mongoose.model(model);

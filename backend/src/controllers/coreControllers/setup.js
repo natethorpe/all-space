@@ -1,3 +1,4 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\controllers\coreControllers\setup.js
 require('dotenv').config({ path: '.env' });
 require('dotenv').config({ path: '.env.local' });
 const { globSync } = require('glob');

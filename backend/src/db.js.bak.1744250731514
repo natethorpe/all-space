@@ -1,0 +1,171 @@
+/*
+ * File Path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\db.js
+ * Purpose: Registers all Mongoose schemas and connects to MongoDB for IDURAR ERP CRM.
+ * Dependencies: mongoose, winston, bcryptjs
+ * Notes:
+ *   - Connects to MongoDB (idurar_erp_crm), registers Task, Setting, Admin, AdminPassword, Sponsor, Memory, and now BackendProposal schemas.
+ *   - Grok Programming Machine: Read this file to verify schema registration; update notes with connection status.
+ *   - Nate & Grok: Future updates:
+ *     - Dynamic model loading from config file (Sprint 6).
+ *     - Prune old Memory entries based on relevance (Sprint 5).
+ * Change Log:
+ *   - 04/08/2025: Comprehensive schema registration (Chat Line 4400).
+ *   - 04/08/2025: Added Memory schema (Chat Line 5800).
+ *   - 04/08/2025: Merged Admin/AdminPassword from coreModels (Chat Line 6000-ish).
+ *   - 04/08/2025: Updated Setting schema with coreModels/Settings.js fields (Chat Line 6200-ish).
+ *   - 04/08/2025: Added mongoose.connect (Chat Line 6800-ish).
+ *   - 04/09/2025: Added BackendProposal schema for autonomy (Chat Line 9100-ish).
+ *     - Why: Store backend proposals for user approval (User request, 04/09/2025).
+ *     - How: Added schema with file, change, reason, status, taskId fields.
+ *     - Impact: Enables persistent storage of backend proposals, critical for approval workflow.
+ *     - Test: Submit "Add payroll endpoint", verify backendProposals collection in MongoDB.
+ * Self-Notes:
+ *   - Nate: Test schema with complex proposals (e.g., multi-line changes)—ensure Mixed type isn’t needed.
+ *   - Nate: Monitor DB performance with growing proposals—index taskId if queries slow down.
+ */
+
+const mongoose = require('mongoose');
+const winston = require('winston');
+const bcrypt = require('bcryptjs');
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+  transports: [
+    new winston.transports.File({ filename: 'grok.log', maxsize: 1024 * 1024 }),
+    new winston.transports.Console()
+  ]
+});
+
+// MongoDB Connection
+const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/idurar_erp_crm';
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => logger.info('MongoDB connected successfully'))
+  .catch(err => logger.error(`MongoDB connection error: ${err.message}`, { stack: err.stack }));
+
+logger.info('db.js: Starting schema registration');
+console.log('db.js: Starting schema registration');
+
+// Task Schema (for grok.js)
+const taskSchema = new mongoose.Schema({
+  taskId: { type: String, required: true },
+  prompt: { type: String, required: true },
+  file: { type: String },
+  status: { type: String, default: 'pending' },
+  cadence: { type: String },
+  priority: { type: Number },
+  generatedFiles: { type: [String], default: [] },
+  originalContent: { type: mongoose.Schema.Types.Mixed },
+  newContent: { type: mongoose.Schema.Types.Mixed },
+  feedback: { type: String },
+  maintenanceReport: { type: Object },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+mongoose.model('Task', taskSchema);
+logger.info('db.js: Task schema registered');
+
+// Setting Schema (merged from src/models/coreModels/Settings.js)
+const settingSchema = new mongoose.Schema({
+  removed: { type: Boolean, default: false },
+  enabled: { type: Boolean, default: true },
+  settingCategory: {
+    type: String,
+    required: true,
+    lowercase: true,
+    enum: ['general', 'display', 'payment']
+  },
+  settingKey: { type: String, lowercase: true, required: true },
+  settingValue: { type: mongoose.Schema.Types.Mixed, required: true },
+  valueType: { type: String, default: 'String' },
+  isPrivate: { type: Boolean, default: false },
+  isCoreSetting: { type: Boolean, default: false }
+}, { timestamps: true });
+mongoose.model('Setting', settingSchema);
+logger.info('db.js: Setting schema registered');
+
+// Admin Schema
+const adminSchema = new mongoose.Schema({
+  removed: { type: Boolean, default: false },
+  enabled: { type: Boolean, default: true },
+  email: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  role: { type: String, default: 'staff' },
+  tierAccess: { type: [String], default: ['High', 'Moderate-High'] },
+  created: { type: Date, default: Date.now },
+}, { timestamps: true });
+mongoose.model('Admin', adminSchema);
+logger.info('db.js: Admin schema registered');
+
+// AdminPassword Schema
+const adminPasswordSchema = new mongoose.Schema({
+  removed: { type: Boolean, default: false },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  password: { type: String, required: true },
+  emailVerified: { type: Boolean, default: false },
+  authType: { type: String, default: 'email' },
+  loggedSessions: { type: [String], default: [] },
+}, { timestamps: true });
+adminPasswordSchema.methods.validPassword = async function (password) {
+  return await bcrypt.compare(password, this.password);
+};
+adminPasswordSchema.methods.generateHash = function (salt, password) {
+  return bcrypt.hashSync(password + salt, 10);
+};
+mongoose.model('AdminPassword', adminPasswordSchema);
+logger.info('db.js: AdminPassword schema registered');
+
+// Sponsor Schema
+const sponsorSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  likeliness: { type: Number, min: 0, max: 100 },
+  est_cost: { type: Number, min: 0 },
+  tier_level: { type: String, enum: ['Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5'], default: 'Tier 1' },
+  fit_score: { type: Number, min: 0, max: 100 },
+  email: { type: String, trim: true },
+  image: { type: String, trim: true },
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+  schedule: [{
+    title: { type: String, required: true },
+    date: { type: Date, required: true },
+    description: { type: String },
+    _id: { type: mongoose.Schema.Types.ObjectId, auto: true }
+  }],
+  email_tasks: [{ type: mongoose.Schema.Types.Mixed }],
+  historicalData: [{
+    type: { type: String, required: true },
+    details: { type: mongoose.Schema.Types.Mixed },
+    date: { type: Date, default: Date.now }
+  }],
+  removed: { type: Boolean, default: false }
+}, { timestamps: true });
+mongoose.model('Sponsor', sponsorSchema);
+logger.info('db.js: Sponsor schema registered');
+
+// Memory Schema
+const memorySchema = new mongoose.Schema({
+  type: { type: String, required: true },
+  data: { type: mongoose.Schema.Types.Mixed },
+  timestamp: { type: Date, default: Date.now },
+  relevance: { type: Number, default: 1.0 }
+});
+mongoose.model('Memory', memorySchema);
+logger.info('db.js: Memory schema registered');
+
+// BackendProposal Schema
+const backendProposalSchema = new mongoose.Schema({
+  file: { type: String, required: true }, // e.g., 'grok.js'
+  change: { type: String, required: true }, // e.g., 'Add POST /api/grok/payroll endpoint'
+  reason: { type: String, required: true }, // e.g., 'Support payroll data submission'
+  status: { type: String, default: 'pending', enum: ['pending', 'approved', 'denied'] },
+  taskId: { type: String, required: true }, // Link to originating task
+  createdAt: { type: Date, default: Date.now },
+  appliedAt: { type: Date }
+});
+mongoose.model('BackendProposal', backendProposalSchema);
+logger.info('db.js: BackendProposal schema registered');
+
+logger.info('db.js: Model imports completed');
+console.log('db.js: Model imports completed');
+
+module.exports = mongoose;

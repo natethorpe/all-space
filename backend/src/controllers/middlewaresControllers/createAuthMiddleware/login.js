@@ -1,59 +1,51 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\controllers\middlewaresControllers\createAuthMiddleware\login.js
+console.log('Loading login.js (version 3 - confirmed load)');
+
 const Joi = require('joi');
-
 const mongoose = require('mongoose');
-
 const authUser = require('./authUser');
 
 const login = async (req, res, { userModel }) => {
-  const UserPasswordModel = mongoose.model(userModel + 'Password');
+  console.log('Executing login function for:', req.body.email);
+
   const UserModel = mongoose.model(userModel);
+  const UserPasswordModel = mongoose.model('AdminPassword');
+
   const { email, password } = req.body;
 
-  // validate
-  const objectSchema = Joi.object({
-    email: Joi.string()
-      .email({ tlds: { allow: true } })
-      .required(),
-    password: Joi.string().required(),
-  });
+  try {
+    console.log('Login attempt:', { email });
+    const user = await UserModel.findOne({ email, removed: false });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        result: null,
+        message: 'No account with this email exists',
+      });
+    }
+    console.log('User found:', user);
 
-  const { error, value } = objectSchema.validate({ email, password });
-  if (error) {
-    return res.status(409).json({
+    let databasePassword = await UserPasswordModel.findOne({ user: user._id, removed: false });
+    if (!databasePassword) {
+      return res.status(404).json({
+        success: false,
+        result: null,
+        message: 'No password set for this account',
+      });
+    }
+    console.log('Password found:', databasePassword);
+
+    console.log('Before calling authUser');
+    await authUser(req, res, { user, databasePassword, password, UserPasswordModel });
+  } catch (error) {
+    console.error('Error in login:', error);
+    return res.status(500).json({
       success: false,
       result: null,
-      error: error,
-      message: 'Invalid/Missing credentials.',
-      errorMessage: error.message,
+      message: error.message,
+      error,
     });
   }
-
-  const user = await UserModel.findOne({ email: email, removed: false });
-
-  // console.log(user);
-  if (!user)
-    return res.status(404).json({
-      success: false,
-      result: null,
-      message: 'No account with this email has been registered.',
-    });
-
-  const databasePassword = await UserPasswordModel.findOne({ user: user._id, removed: false });
-
-  if (!user.enabled)
-    return res.status(409).json({
-      success: false,
-      result: null,
-      message: 'Your account is disabled, contact your account adminstrator',
-    });
-
-  //  authUser if your has correct password
-  authUser(req, res, {
-    user,
-    databasePassword,
-    password,
-    UserPasswordModel,
-  });
 };
 
 module.exports = login;

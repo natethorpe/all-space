@@ -1,7 +1,14 @@
+// C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\src\forms\LoginForm.jsx
+// Notes:
+// - Purpose: Renders login form fields.
+// - Updates (04/03/2025): Added autoComplete="current-password" to Input.Password.
+// - Why: Fixes DOM warning, improves UX per browser standards.
+// - How: Updated password field directly, no prop needed.
+// - Next Steps: Test login, verify warning disappears.
+
 import React from 'react';
 import { Form, Input, Checkbox } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
-
 import useLanguage from '@/locale/useLanguage';
 
 export default function LoginForm() {
@@ -12,17 +19,13 @@ export default function LoginForm() {
         label={translate('email')}
         name="email"
         rules={[
-          {
-            required: true,
-          },
-          {
-            type: 'email',
-          },
+          { required: true, message: translate('Please input your email!') },
+          { type: 'email', message: translate('Please enter a valid email!') },
         ]}
       >
         <Input
           prefix={<UserOutlined className="site-form-item-icon" />}
-          placeholder={'admin@demo.com'}
+          placeholder="admin@demo.com"
           type="email"
           size="large"
         />
@@ -31,18 +34,16 @@ export default function LoginForm() {
         label={translate('password')}
         name="password"
         rules={[
-          {
-            required: true,
-          },
+          { required: true, message: translate('Please input your password!') },
         ]}
       >
         <Input.Password
           prefix={<LockOutlined className="site-form-item-icon" />}
-          placeholder={'admin123'}
+          placeholder="admin123"
           size="large"
+          autoComplete="current-password" // Added
         />
       </Form.Item>
-
       <Form.Item>
         <Form.Item name="remember" valuePropName="checked" noStyle>
           <Checkbox>{translate('Remember me')}</Checkbox>

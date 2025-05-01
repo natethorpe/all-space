@@ -1,3 +1,4 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\src\redux\storePersists.js
 function isJsonString(str) {
   try {
     JSON.parse(str);

@@ -1,61 +1,59 @@
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\controllers\middlewaresControllers\createAuthMiddleware\authUser.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
+
+console.log('Loading authUser.js (version 12 - confirmed load)');
 
 const authUser = async (req, res, { user, databasePassword, password, UserPasswordModel }) => {
-  const isMatch = await bcrypt.compare(databasePassword.salt + password, databasePassword.password);
+  console.log('Inside authUser function for:', user.email);
+  try {
+    console.log('Comparing passwords:', { provided: password, stored: databasePassword.password });
+    const isMatch = await bcrypt.compare(password, databasePassword.password);
+    console.log('Password match result:', isMatch);
 
-  if (!isMatch)
-    return res.status(403).json({
-      success: false,
-      result: null,
-      message: 'Invalid credentials.',
-    });
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        result: null,
+        message: 'Invalid email or password',
+      });
+    }
 
-  if (isMatch === true) {
     const token = jwt.sign(
-      {
-        id: user._id,
-      },
+      { _id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: req.body.remember ? 365 * 24 + 'h' : '24h' }
+      { expiresIn: '1y' }
     );
+    console.log('Token generated:', token);
 
-    await UserPasswordModel.findOneAndUpdate(
-      { user: user._id },
-      { $push: { loggedSessions: token } },
-      {
-        new: true,
-      }
-    ).exec();
+    // Store token in loggedSessions
+    if (!databasePassword.loggedSessions) databasePassword.loggedSessions = [];
+    databasePassword.loggedSessions.push(token);
+    await databasePassword.save();
+    console.log('Token saved to loggedSessions:', databasePassword.loggedSessions);
 
-    // .cookie(`token_${user.cloud}`, token, {
-    //     maxAge: req.body.remember ? 365 * 24 * 60 * 60 * 1000 : null,
-    //     sameSite: 'None',
-    //     httpOnly: true,
-    //     secure: true,
-    //     domain: req.hostname,
-    //     path: '/',
-    //     Partitioned: true,
-    //   })
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       result: {
         _id: user._id,
         name: user.name,
-        surname: user.surname,
+        surname: user.surname || null,
         role: user.role,
         email: user.email,
-        photo: user.photo,
-        token: token,
-        maxAge: req.body.remember ? 365 : null,
+        photo: user.photo || null,
+        token,
+        maxAge: user.role === 'manager' ? 365 : null,
       },
       message: 'Successfully login user',
     });
-  } else {
-    return res.status(403).json({
+  } catch (error) {
+    console.error('Error in authUser:', error);
+    return res.status(500).json({
       success: false,
       result: null,
-      message: 'Invalid credentials.',
+      message: error.message,
+      error,
     });
   }
 };

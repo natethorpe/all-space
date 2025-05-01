@@ -1,21 +1,17 @@
-import { useNavigate } from 'react-router-dom';
+// File path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\src\pages\ForgetPassword.jsx
 
+import { useNavigate } from 'react-router-dom';
 import { Form, Result, Button } from 'antd';
 import useOnFetch from '@/hooks/useOnFetch';
-import { request } from '@/request';
-
+import request from '@/request'; // Changed to default import
 import ForgetPasswordForm from '@/forms/ForgetPasswordForm';
-
 import useLanguage from '@/locale/useLanguage';
-
 import Loading from '@/components/Loading';
 import AuthModule from '@/modules/AuthModule';
 
 const ForgetPassword = () => {
   const translate = useLanguage();
-
   const navigate = useNavigate();
-
   const { onFetch, isSuccess, isLoading } = useOnFetch();
 
   async function postData(data) {
@@ -49,6 +45,7 @@ const ForgetPassword = () => {
       </Loading>
     );
   };
+
   if (!isSuccess) {
     return <AuthModule authContent={<FormContainer />} AUTH_TITLE="Forget Password" />;
   } else {
@@ -68,7 +65,7 @@ const ForgetPassword = () => {
             {translate('Login')}
           </Button>
         }
-      ></Result>
+      />
     );
   }
 };

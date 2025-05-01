@@ -1,0 +1,130 @@
+/*
+ * File Path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\db.js
+ * Purpose: Defines MongoDB schemas and connects to the database for Allur Space Console.
+ * How It Works: Sets up Mongoose models for Task, Memory, BackendProposal, EmployeeLog, Setting, Admin, AdminPassword, Sponsor.
+ * Dependencies: mongoose (DB), winston (logging).
+ * Dependents: Used by taskProcessorV18.js, taskTesterV18.js, grok.js, adminAuth/index.js, settingController.
+ * Why It’s Here: Centralizes database setup, critical for task persistence in Sprint 2.
+ * Key Info: Task schema uses Mixed for newContent/originalContent to support dynamic objects.
+ * Change Log:
+ *   - 04/09/2025: Added initial schemas (Chat Line 8000-ish).
+ *   - 04/13/2025: Added Setting, Admin, AdminPassword, Sponsor schemas (This Chat).
+ *     - Why: Startup logs showed missing schemas, needed for app functionality.
+ *     - How: Added minimal schemas based on log evidence, kept Mixed for Task fields.
+ *     - Test: Start backend, verify no schema errors, submit task, check diff modal.
+ * Self-Notes:
+ *   - Nate: Added Setting, Admin, AdminPassword, Sponsor to match app.js (04/13/2025).
+ *   - Nate: newContent/originalContent as Mixed supports diff modal (04/13/2025).
+ */
+
+const mongoose = require('mongoose');
+const winston = require('winston');
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+  transports: [
+    new winston.transports.File({ filename: 'grok.log', maxsize: 1024 * 1024 * 10 }),
+    new winston.transports.Console()
+  ]
+});
+
+logger.info('db.js: Starting schema registration');
+
+const taskSchema = new mongoose.Schema({
+  taskId: { type: String, required: true, unique: true },
+  prompt: { type: String, required: true },
+  status: { type: String, default: 'pending' },
+  stagedFiles: [{ type: String }],
+  generatedFiles: [{ type: String }],
+  proposedChanges: [{ file: String, change: String, content: String, reason: String }],
+  originalContent: { type: mongoose.Schema.Types.Mixed, default: {} },
+  newContent: { type: mongoose.Schema.Types.Mixed, default: {} },
+  postTests: { type: mongoose.Schema.Types.Mixed },
+  maintenanceReport: { type: mongoose.Schema.Types.Mixed },
+  cadence: { type: String },
+  priority: { type: Number },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+logger.info('db.js: Task schema registered');
+
+const memorySchema = new mongoose.Schema({
+  taskId: { type: String, required: true },
+  prompt: { type: String, required: true },
+  outcome: { type: String, required: true },
+  lessons: { type: String },
+  type: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now }
+});
+logger.info('db.js: Memory schema registered');
+
+const backendProposalSchema = new mongoose.Schema({
+  taskId: { type: String, required: true },
+  file: { type: String, required: true },
+  change: { type: String, required: true },
+  content: { type: String },
+  reason: { type: String, required: true },
+  status: { type: String, default: 'pending' },
+  appliedAt: { type: Date },
+  createdAt: { type: Date, default: Date.now }
+});
+logger.info('db.js: BackendProposal schema registered');
+
+const employeeLogSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  payroll: { type: Number },
+  clockInTime: { type: Date },
+  createdAt: { type: Date, default: Date.now }
+});
+logger.info('db.js: EmployeeLog schema registered');
+
+const settingSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true },
+  value: { type: mongoose.Schema.Types.Mixed },
+  updatedAt: { type: Date, default: Date.now }
+});
+logger.info('db.js: Setting schema registered');
+
+const adminSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  role: { type: String, default: 'admin' },
+  createdAt: { type: Date, default: Date.now }
+});
+logger.info('db.js: Admin schema registered');
+
+const adminPasswordSchema = new mongoose.Schema({
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  password: { type: String, required: true },
+  updatedAt: { type: Date, default: Date.now }
+});
+logger.info('db.js: AdminPassword schema registered');
+
+const sponsorSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  profile: { type: mongoose.Schema.Types.Mixed },
+  createdAt: { type: Date, default: Date.now }
+});
+logger.info('db.js: Sponsor schema registered');
+
+mongoose.model('Task', taskSchema);
+mongoose.model('Memory', memorySchema);
+mongoose.model('BackendProposal', backendProposalSchema);
+mongoose.model('EmployeeLog', employeeLogSchema);
+mongoose.model('Setting', settingSchema);
+mongoose.model('Admin', adminSchema);
+mongoose.model('AdminPassword', adminPasswordSchema);
+mongoose.model('Sponsor', sponsorSchema);
+
+logger.info('db.js: Model imports completed');
+
+mongoose.connect('mongodb://localhost:27017/idurar_erp_crm', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  logger.info('MongoDB connected successfully', { uri: 'mongodb://localhost:27017/idurar_erp_crm' });
+}).catch(err => {
+  logger.error('MongoDB connection failed', { error: err.message });
+});
+
+module.exports = mongoose;

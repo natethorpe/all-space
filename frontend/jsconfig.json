@@ -1,9 +1,22 @@
+// C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\frontend\jsconfig.json
+// Notes:
+// - Purpose: Configures VS Code for React/Vite project.
+// - Issue (04/03/2025): VS Code flagged "version": "4.1.0", but this file is correct—likely cache issue.
+// - Why: Ensures proper JSX parsing and module resolution.
+// - How: Matches your provided version; restart VS Code to clear cache.
+// - Future: Add paths for Allur Crypto/AI modules.
+// - Next: Replace file, restart VS Code, verify error gone.
+
 {
   "compilerOptions": {
     "baseUrl": "src",
-    "paths": {
-      "@/*": ["./*"]
-    }
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
   },
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

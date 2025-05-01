@@ -1,3 +1,5 @@
+// File Path: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\middlewares\uploadMiddleware\utils\fileFilterMiddlewar.js
+
 const fileFilterMiddleware = ({ type = 'default', mimetype }) => {
   // array containing all the possible file types
   const _fileType = [
