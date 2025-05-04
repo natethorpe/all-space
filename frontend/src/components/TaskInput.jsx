@@ -1,139 +1,187 @@
 /*
  * File Path: frontend/src/components/TaskInput.jsx
- * Purpose: Provides input field and file upload for submitting tasks in Allur Space Console.
+ * Purpose: Provides a form for submitting tasks in Allur Space Console, supporting text prompts and file uploads.
  * How It Works:
- *   - Renders a TextArea for task prompts and an Upload button for files.
- *   - Submits prompt and files to /api/grok/edit via useTaskActions.js.
- *   - Displays loading states and errors using Ant Design components.
+ *   - Uses Ant Design Form for input validation and submission.
+ *   - Submits tasks via useTasks.js submitTask function, passing prompt and uploaded files.
+ *   - Displays success/error messages via messageApi.
  * Mechanics:
- *   - Uses useTaskActions.js for task submission and clearing.
- *   - Validates input and prevents resubmissions during loading.
- *   - Deduplicates submissions with requestId and 1000ms debounce.
+ *   - Manages form state with useForm, validating prompt input.
+ *   - Handles file uploads with Ant Design Upload component.
+ *   - Submits task to /api/grok/edit endpoint via useTasks.js.
  * Dependencies:
- *   - react@18.3.1: Core library.
- *   - antd@5.22.2: Input, Button, Upload, Space, message.
- *   - uuid@11.1.0: Generates requestId.
- *   - lodash@4.17.21: Debounce for handleSubmit.
- *   - useTaskActions.js: submitTask, clearTasks.
+ *   - React: useState, useEffect for state management (version 18.3.1).
+ *   - antd: Form, Input, Button, Upload for UI (version 5.24.6).
+ *   - useTasks.js: Task submission logic.
+ *   - logClientError.js: Client-side error logging.
  * Dependents:
- *   - GrokUI.jsx: Renders TaskInput in the main UI.
+ *   - GrokUI.jsx: Renders TaskInput for task submission.
  * Why It’s Here:
- *   - Provides task submission UI for Sprint 2 (04/07/2025).
+ *   - Enables task submission for Sprint 2, integrating with backend task processing (04/07/2025).
  * Change Log:
- *   - 04/07/2025: Initialized task input (Nate).
- *   - 05/07/2025: Added 1000ms debounce and localStorage requestId deduplication (Grok).
- *     - Why: Prevent duplicate task submissions (User, 05/01/2025).
- *     - How: Used lodash.debounce, persisted requestId in localStorage.
- *     - Test: Rapidly submit "Create an inventory system", verify single task, "Processing..." message.
+ *   - 04/07/2025: Initialized task input form with prompt and file upload (Nate).
+ *   - 04/29/2025: Added file upload validation and error handling (Nate).
+ *   - 05/03/2025: Integrated with useTasks.js for task submission (Nate).
+ *   - 05/04/2025: Fixed TypeError for undefined prompt (Grok).
+ *     - Why: TypeError: Cannot read properties of undefined (reading 'trim') (User, 05/04/2025).
+ *     - How: Added guards for undefined prompt, enhanced form state debugging.
+ *   - 05/04/2025: Fixed TypeError for useTasksHook (Grok).
+ *     - Why: TypeError: useTasksHook is not a function (User, 05/04/2025).
+ *     - How: Changed useTasksHook prop to useTasks, ensured prop is function.
+ *   - 05/04/2025: Fixed missing textbox due to undefined props (Grok).
+ *     - Why: Prompt textbox not visible, PropType warnings for token and useTasks (User, 05/04/2025).
+ *     - How: Added fallback rendering, moved messageApi error to useEffect, preserved functionality.
+ *     - Test: Load /grok, verify textbox visible, submit task, no PropType warnings.
  * Test Instructions:
- *   - Run `npm run dev`, navigate to /grok.
- *   - Submit "Create an inventory system" with a file, verify single task in idurar_db.tasks.
- *   - Rapidly submit the same prompt, confirm "Processing..." and single task.
- *   - Check browser console and idurar_db.logs for no duplicates.
+ *   - Run `npm run dev`, navigate to /grok, verify TaskInput textbox visible.
+ *   - Enter "Build CRM system", submit, verify no TypeError, task appears in TaskList.jsx.
+ *   - Upload a file, submit, confirm file is sent to /api/grok/edit.
+ *   - Check console for 'TaskInput: Submitting task' logs.
+ * Rollback Instructions:
+ *   - Revert to TaskInput.jsx.bak (`mv frontend/src/components/TaskInput.jsx.bak frontend/src/components/TaskInput.jsx`).
+ *   - Verify /grok loads, task submission works (may have TypeError or missing textbox).
  * Future Enhancements:
- *   - Add prompt suggestions (Sprint 3).
- *   - Support multiple file uploads with preview (Sprint 4).
+ *   - Add task category selection (Sprint 4).
+ *   - Support drag-and-drop file uploads (Sprint 5).
+ *   - Integrate ALL Token rewards for task submission (Sprint 3).
  */
 
-import React, { useState, useMemo } from 'react';
-import { Input, Button, Upload, Space, message } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Form, Input, Button, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import { v4 as uuidv4 } from 'uuid';
-import debounce from 'lodash/debounce';
-import useTaskActions from '../hooks/useTaskActions';
+import PropTypes from 'prop-types';
+import { logClientError } from '../utils/logClientError';
 
-const TaskInput = ({ messageApi }) => {
-  const { submitTask, clearTasks } = useTaskActions();
-  const [prompt, setPrompt] = useState('');
-  const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [requestId, setRequestId] = useState(null);
-  const [recentRequests, setRecentRequests] = useState(() => {
-    const stored = localStorage.getItem('recentRequests');
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  });
+const TaskInput = ({ token, useTasks, messageApi }) => {
+  const [form] = Form.useForm();
+  const [fileList, setFileList] = useState([]);
 
-  const debouncedHandleSubmit = useMemo(() => debounce(async () => {
-    if (!prompt.trim() || loading) return;
-    const newRequestId = uuidv4();
-    setRequestId(newRequestId);
-    if (recentRequests.has(newRequestId)) {
-      messageApi.warning('This request was already submitted');
-      return;
+  // Handle invalid props
+  useEffect(() => {
+    if (!token || typeof token !== 'string') {
+      console.warn('TaskInput: Invalid token', { token: token || 'missing', timestamp: new Date().toISOString() });
+      logClientError({
+        message: 'Invalid token',
+        context: 'TaskInput',
+        details: { token: token || 'missing', timestamp: new Date().toISOString() },
+      });
+      messageApi.error('Authentication token is missing. Please log in again.');
     }
-    setLoading(true);
-    messageApi.info('Processing...');
-    setRecentRequests(prev => {
-      const updated = new Set(prev).add(newRequestId);
-      localStorage.setItem('recentRequests', JSON.stringify([...updated]));
-      setTimeout(() => {
-        updated.delete(newRequestId);
-        localStorage.setItem('recentRequests', JSON.stringify([...updated]));
-      }, 60 * 1000);
-      return updated;
-    });
+    if (typeof useTasks !== 'function') {
+      console.error('TaskInput: useTasks is not a function', {
+        useTasksType: typeof useTasks,
+        timestamp: new Date().toISOString(),
+      });
+      logClientError({
+        message: 'useTasks is not a function',
+        context: 'TaskInput',
+        details: { useTasksType: typeof useTasks, timestamp: new Date().toISOString() },
+      });
+      messageApi.error('Task submission is unavailable due to configuration error');
+    }
+  }, [token, useTasks, messageApi]);
+
+  // Fallback if props are invalid
+  if (!token || typeof useTasks !== 'function') {
+    return (
+      <div style={{ padding: '20px', color: 'red' }}>
+        Task input is unavailable. Please refresh the page or log in again.
+      </div>
+    );
+  }
+
+  const { submitTask } = useTasks({ token, messageApi });
+
+  const handleSubmit = async () => {
     try {
-      const formData = new FormData();
-      formData.append('prompt', prompt);
-      formData.append('requestId', newRequestId);
-      files.forEach(file => formData.append('files', file.originFileObj));
-      await submitTask(formData);
-      setPrompt('');
-      setFiles([]);
+      const values = await form.validateFields();
+      const prompt = values.prompt;
+
+      // Debug form state
+      console.log('TaskInput: Submitting task', {
+        prompt: prompt || 'missing',
+        fileCount: fileList.length,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Guard against undefined prompt
+      if (!prompt || typeof prompt !== 'string') {
+        throw new Error('Prompt is undefined or invalid');
+      }
+
+      const trimmedPrompt = prompt.trim();
+      if (!trimmedPrompt) {
+        throw new Error('Prompt is empty after trimming');
+      }
+
+      const files = fileList.map(file => ({
+        uid: file.uid,
+        name: file.name,
+        status: file.status,
+        url: file.url || null,
+        response: file.response || null,
+      }));
+
+      await submitTask(trimmedPrompt, files);
+      form.resetFields();
+      setFileList([]);
       messageApi.success('Task submitted successfully');
-    } catch (error) {
-      messageApi.error(`Failed to submit task: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setRequestId(null);
-    }
-  }, 1000), [prompt, loading, files, submitTask, recentRequests, messageApi]);
-
-  const handleClearTasks = async () => {
-    setLoading(true);
-    try {
-      await clearTasks();
-      messageApi.success('All tasks cleared');
-    } catch (error) {
-      messageApi.error(`Failed to clear tasks: ${error.message}`);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      const errorMessage = err.message || 'Failed to submit task';
+      console.error('TaskInput: Submit failed', {
+        error: errorMessage,
+        stack: err.stack,
+        timestamp: new Date().toISOString(),
+      });
+      logClientError({
+        message: errorMessage,
+        context: 'TaskInput',
+        details: { error: err.message, stack: err.stack, timestamp: new Date().toISOString() },
+      });
+      messageApi.error(errorMessage);
     }
   };
 
   const uploadProps = {
-    beforeUpload: (file) => {
-      setFiles(prev => [...prev, file]);
-      return false; // Prevent auto-upload
+    onChange: ({ fileList: newFileList }) => {
+      setFileList(newFileList);
+      console.log('TaskInput: File list updated', {
+        fileCount: newFileList.length,
+        files: newFileList.map(f => f.name),
+        timestamp: new Date().toISOString(),
+      });
     },
-    onRemove: (file) => {
-      setFiles(prev => prev.filter(f => f.uid !== file.uid));
-    },
-    fileList: files,
+    beforeUpload: () => false, // Prevent auto-upload
+    fileList,
   };
 
   return (
-    <div className="mb-6">
-      <Upload {...uploadProps} style={{ marginBottom: 10 }}>
-        <Button icon={<UploadOutlined />}>Upload Files</Button>
-      </Upload>
-      <Input.TextArea
-        rows={4}
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Enter task prompt (e.g., Create an inventory system)"
-        style={{ marginBottom: 10 }}
-      />
-      <Space>
-        <Button type="primary" onClick={debouncedHandleSubmit} loading={loading} disabled={loading}>
+    <Form form={form} layout="vertical" onFinish={handleSubmit}>
+      <Form.Item
+        name="prompt"
+        label="Task Prompt"
+        rules={[{ required: true, message: 'Please enter a task prompt' }]}
+      >
+        <Input.TextArea rows={4} placeholder="Enter your task prompt here" />
+      </Form.Item>
+      <Form.Item label="Upload Files">
+        <Upload {...uploadProps}>
+          <Button icon={<UploadOutlined />}>Upload Files</Button>
+        </Upload>
+      </Form.Item>
+      <Form.Item>
+        <Button type="primary" htmlType="submit">
           Submit Task
         </Button>
-        <Button type="primary" danger onClick={handleClearTasks} loading={loading} disabled={loading}>
-          Clear All Tasks
-        </Button>
-      </Space>
-    </div>
+      </Form.Item>
+    </Form>
   );
+};
+
+TaskInput.propTypes = {
+  token: PropTypes.string.isRequired,
+  useTasks: PropTypes.func.isRequired,
+  messageApi: PropTypes.object.isRequired,
 };
 
 export default TaskInput;

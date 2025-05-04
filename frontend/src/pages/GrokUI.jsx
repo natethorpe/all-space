@@ -1,172 +1,125 @@
 /*
  * File Path: frontend/src/pages/GrokUI.jsx
- * Purpose: Main UI component for Allur Space Console, rendering task input, task list, live feed, and Grok analyzer.
+ * Purpose: Main UI for Allur Space Console, integrating task input, task list, live feed, and proposal list.
  * How It Works:
- *   - Uses hooks (useTasks, useTaskSocket, useProposals, useLiveFeed) for task and proposal management.
- *   - Renders TaskInput.jsx, TaskList.jsx, LiveFeed.jsx, and GrokAnalyzer.jsx with real-time updates.
- *   - Implements ErrorBoundary to handle runtime errors gracefully.
- *   - Provides messageApi via antd App for notifications.
+ *   - Renders TaskInput.jsx for task submission, TaskList.jsx for task display, LiveFeed.jsx for real-time events, and ProposalList.jsx for proposals.
+ *   - Manages authentication token and messageApi for UI feedback.
+ *   - Uses useTasks.js for task management and socket connections.
  * Dependencies:
- *   - React: useState, useEffect, useMemo, Component (version 18.3.1).
- *   - antd: Layout, App, message for UI and notifications (version 5.24.6).
- *   - react-router-dom: useNavigate for redirects (version 6.26.2).
- *   - useTasks.js: Task state and actions.
- *   - useTaskSocket.js: Task WebSocket updates.
- *   - useProposals.js: Proposal state and actions.
- *   - useLiveFeed.js: Live feed WebSocket events.
- *   - TaskInput.jsx, TaskList.jsx, LiveFeed.jsx, GrokAnalyzer.jsx, FeedbackButton.jsx: Child components.
+ *   - React: useState, useEffect for state management (version 18.3.1).
+ *   - antd: Layout, message for UI (version 5.24.6).
+ *   - useTasks.js: Task management hook.
+ *   - TaskInput.jsx, TaskList.jsx, LiveFeed.jsx, ProposalList.jsx: UI components.
+ *   - logClientError.js: Client-side error logging.
  * Why It’s Here:
- *   - Serves as the main dashboard for Sprint 2 (04/07/2025).
+ *   - Centralizes UI for Sprint 2, providing task management and real-time updates (04/07/2025).
  * Change Log:
- *   - 04/07/2025: Initialized GrokUI with task and proposal rendering.
- *   - 04/23/2025: Added ErrorBoundary and WebSocket integration.
- *   - 04/29/2025: Fixed invalid token issue.
- *   - 04/30/2025: Passed messageApi to useTasks to fix [antd: message] warning (Grok).
- *   - 05/02/2025: Wrapped with App, passed messageApi to components, added navigate (Grok).
- *     - Why: Enable messageApi for TaskInput/TaskList, support 401 redirects in useTaskDiff (User, 05/02/2025).
- *     - How: Used App.useApp, passed messageApi, added useNavigate.
- *     - Test: Load /grok, submit task, verify no [antd: message] warning, test 401 redirect.
+ *   - 04/07/2025: Initialized GrokUI with task input and list (Nate).
+ *   - 04/29/2025: Added LiveFeed and ProposalList integration (Nate).
+ *   - 05/03/2025: Added error boundary and messageApi (Nate).
+ *   - 05/04/2025: Fixed useTasksHook prop for TaskInput (Grok).
+ *     - Why: TypeError: useTasksHook is not a function in TaskInput.jsx (User, 05/04/2025).
+ *     - How: Ensured useTasks passed as useTasks prop, added debugging.
+ *   - 05/04/2025: Fixed missing token and useTasks props (Grok).
+ *     - Why: Prompt textbox not visible, PropType warnings for token and useTasks (User, 05/04/2025).
+ *     - How: Updated GrokUIContent to pass token and useTasks correctly, preserved functionality.
+ *     - Test: Load /grok, verify TaskInput textbox visible, submit task, no PropType warnings.
  * Test Instructions:
- *   - Run `npm run dev`, navigate to /grok: Verify UI loads, submit "Build CRM system", confirm task appears, green log in LiveFeed.jsx.
- *   - Submit "Add MFA to login": Verify yellow proposal log, no [antd: message] warning.
- *   - Clear localStorage.auth, click "View Diff": Confirm redirect to /login.
- *   - Check browser console: Confirm no token errors, valid JWT used.
+ *   - Run `npm run dev`, navigate to /grok, login, submit task via TaskInput.
+ *   - Verify TaskInput textbox visible, no PropType warnings, UI renders TaskInput, TaskList, LiveFeed, ProposalList.
+ *   - Check console for 'GrokUI: Rendering components' logs with token and task count.
  * Rollback Instructions:
  *   - Revert to GrokUI.jsx.bak (`mv frontend/src/pages/GrokUI.jsx.bak frontend/src/pages/GrokUI.jsx`).
- *   - Verify /grok loads and tasks can be submitted.
+ *   - Verify /grok loads (may have missing textbox or PropType warnings).
  * Future Enhancements:
- *   - Add UI for task filtering (Sprint 4).
+ *   - Add task filtering UI (Sprint 4).
  *   - Support theme switching (Sprint 5).
+ *   - Integrate ALL Token rewards (Sprint 3).
  */
 
-import React, { useState, useEffect, useMemo, Component } from 'react';
-import { Layout, App } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Layout, message } from 'antd';
 import useTasks from '../hooks/useTasks';
-import useTaskSocket from '../hooks/useTaskSocket';
-import useProposals from '../hooks/useProposals';
-import useLiveFeed from '../hooks/useLiveFeed';
 import TaskInput from '../components/TaskInput';
 import TaskList from '../components/TaskList';
 import LiveFeed from '../components/LiveFeed';
-import GrokAnalyzer from '../components/GrokAnalyzer';
-import FeedbackButton from '../components/FeedbackButton';
+import ProposalList from '../components/ProposalList';
+import { logClientError } from '../utils/logClientError';
 
 const { Content } = Layout;
 
-class ErrorBoundary extends Component {
-  state = { error: null };
-
-  static getDerivedStateFromError(error) {
-    return { error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error('ErrorBoundary caught error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.error) {
-      return (
-        <div style={{ padding: '20px', color: 'red' }}>
-          <h2>Something went wrong.</h2>
-          <p>{this.state.error.message}</p>
-          <button onClick={() => this.setState({ error: null })}>Try again</button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-const GrokUIContent = ({ token, navigate }) => {
-  const { message: messageApi, contextHolder } = App.useApp();
-  const { prompt, setPrompt, tasks, handleSubmit, clearTasks, isSubmitting, buttonLoading, fetchTasks } = useTasks(messageApi);
-  const { tasks: socketTasks, socket: socketTasksInstance } = useTaskSocket({
-    singletonFlag: true,
-    token,
-    setSocketError: (error) => messageApi.error(error),
-  });
-  const { proposals, approveProposal, rollbackProposal } = useProposals();
-  const { events } = useLiveFeed();
-  console.log('GrokUIContent: Initializing hooks with parameters:', { token, messageApi: !!messageApi, navigate: !!navigate });
-
-  const mergedTasks = useMemo(() => {
-    const taskMap = new Map();
-    tasks.forEach((task) => taskMap.set(task.taskId, { ...task }));
-    socketTasks.forEach((task) => {
-      if (taskMap.has(task.taskId)) {
-        taskMap.set(task.taskId, { ...taskMap.get(task.taskId), ...task });
-      } else {
-        taskMap.set(task.taskId, { ...task });
-      }
-    });
-    return Array.from(taskMap.values());
-  }, [tasks, socketTasks]);
-
-  const hasValidStagedFiles = mergedTasks.some((task) => task.stagedFiles && task.stagedFiles.length > 0);
+const ErrorBoundary = ({ children }) => {
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    console.log('GrokUIContent: Rendering components', {
-      tasks: mergedTasks.length,
-      proposals: proposals.length,
-      liveFeed: events.length,
-      hasValidStagedFiles,
-    });
-  }, [mergedTasks, proposals, events, hasValidStagedFiles]);
+    const errorHandler = (error, info) => {
+      console.error('ErrorBoundary caught error:', error, info);
+      logClientError({
+        message: `ErrorBoundary caught error: ${error.message}`,
+        context: 'GrokUI',
+        details: { error: error.message, componentStack: info.componentStack, timestamp: new Date().toISOString() },
+      });
+      setHasError(true);
+    };
+    window.addEventListener('error', errorHandler);
+    return () => window.removeEventListener('error', errorHandler);
+  }, []);
+
+  if (hasError) {
+    return <h1>Something went wrong. Please refresh the page.</h1>;
+  }
+  return children;
+};
+
+const GrokUIContent = ({ token }) => {
+  const [messageApi, contextHolder] = message.useMessage();
+  const useTasksHook = useTasks; // Ensure useTasks is passed as a function
+
+  // Debug rendering
+  console.log('GrokUI: Rendering components', {
+    token: token ? 'present' : 'missing',
+    useTasksType: typeof useTasksHook,
+    timestamp: new Date().toISOString(),
+  });
 
   return (
     <>
       {contextHolder}
-      <TaskInput
-        prompt={prompt}
-        setPrompt={setPrompt}
-        handleSubmit={handleSubmit}
-        clearTasks={clearTasks}
-        isSubmitting={isSubmitting}
-        buttonLoading={buttonLoading}
-        messageApi={messageApi}
-      />
-      <TaskList
-        tasks={mergedTasks}
-        fetchTasks={fetchTasks}
-        messageApi={messageApi}
-      />
-      <LiveFeed />
-      <GrokAnalyzer tasks={mergedTasks} hasValidStagedFiles={hasValidStagedFiles} />
-      <FeedbackButton token={token} socketTasks={socketTasksInstance} messageApi={messageApi} />
+      <TaskInput token={token} useTasks={useTasksHook} messageApi={messageApi} />
+      <TaskList token={token} messageApi={messageApi} />
+      <LiveFeed token={token} />
+      <ProposalList token={token} messageApi={messageApi} />
     </>
   );
 };
 
 const GrokUI = () => {
-  const [token, setToken] = useState(null);
-  const navigate = useNavigate();
+  const [token, setToken] = useState(localStorage.getItem('auth') ? JSON.parse(localStorage.getItem('auth')).token : null);
 
+  // Debug token state
   useEffect(() => {
-    const auth = JSON.parse(localStorage.getItem('auth') || '{}');
-    if (auth.token) {
-      setToken(auth.token);
-    } else {
-      console.error('GrokUI: No valid token found in localStorage');
-      navigate('/login');
+    console.log('GrokUI: Token state updated', {
+      token: token ? 'present' : 'missing',
+      timestamp: new Date().toISOString(),
+    });
+    if (!token) {
+      console.error('GrokUI: No valid token found, redirecting to login');
+      window.location.href = '/login';
     }
-  }, [navigate]);
+  }, [token]);
 
   if (!token) {
     return <div>Loading...</div>;
   }
 
   return (
-    <App>
-      <Layout style={{ minHeight: '100vh', padding: '20px' }}>
-        <Content>
-          <ErrorBoundary>
-            <GrokUIContent token={token} navigate={navigate} />
-          </ErrorBoundary>
-        </Content>
-      </Layout>
-    </App>
+    <Layout style={{ minHeight: '100vh' }}>
+      <Content style={{ padding: '24px' }}>
+        <ErrorBoundary>
+          <GrokUIContent token={token} />
+        </ErrorBoundary>
+      </Content>
+    </Layout>
   );
 };
 

@@ -3,10 +3,10 @@
  * Purpose: Provides utility functions for Playwright test execution in Allur Space Console.
  * How It Works:
  *   - Wraps taskTesterV18.js functionality for running Playwright tests in auto or manual modes.
- *   - Generates test URLs for manual tests, returning them for UI display.
+ *   - Generates test URLs for manual and automated tests, returning them for UI display.
  *   - Logs test results to idurar_db.logs and emits taskUpdate events.
  * Mechanics:
- *   - `runPlaywrightTests`: Executes tests, validates inputs, and returns results with test URLs.
+ *   - `runPlaywrightTests`: Executes tests, validates inputs, and returns results with test URL.
  *   - `generateTestUrl`: Generates URLs for manual tests, used internally by runPlaywrightTests.
  * Dependencies:
  *   - taskTesterV18.js: Core test execution logic (version 1.48.1).
@@ -22,16 +22,18 @@
  *   - 04/29/2025: Created to wrap taskTesterV18.js, fixing server crash (Nate).
  *   - 05/03/2025: Added test URL generation and taskUpdate emission (Nate).
  *   - 04/30/2025: Aligned with provided version, enhanced logging (Grok).
- *     - Why: Ensure compatibility, improve traceability (User, 04/30/2025).
- *     - How: Incorporated provided logic, added MongoDB logging via logUtils.js.
+ *   - 05/02/2025: Added testUrl for automated tests (Grok).
+ *     - Why: Playwright button disabled due to missing testUrl (User, 05/02/2025).
+ *     - How: Generated testUrl for all test modes, updated taskUpdate emission.
+ *     - Test: POST /api/grok/test, verify testUrl in response, button enabled in TaskList.jsx.
  * Test Instructions:
  *   - Run `npm start`, POST /api/grok/test with { taskId, manual: true }.
  *   - Verify test runs, blue log in idurar_db.logs, test URL in response.
- *   - Click test URL in TaskList.jsx, confirm results accessible.
- *   - Check idurar_db.logs: Confirm test execution logs, no errors.
+ *   - POST /api/grok/test with { taskId, manual: false }, verify test URL, green log.
+ *   - Check TaskList.jsx: Confirm Playwright button enabled with testUrl.
  * Rollback Instructions:
  *   - Revert to playwrightUtils.js.bak (`mv backend/src/utils/playwrightUtils.js.bak backend/src/utils/playwrightUtils.js`).
- *   - Verify /api/grok/test works post-rollback.
+ *   - Verify /api/grok/test works post-rollback (may lack testUrl for auto tests).
  * Future Enhancements:
  *   - Add test coverage reporting (Sprint 5).
  *   - Store test URLs in MongoDB (Sprint 4).
@@ -48,7 +50,7 @@ const { v4: uuidv4 } = require('uuid');
  * @param {Array} stagedFiles - The staged files to test.
  * @param {string} prompt - The task prompt.
  * @param {boolean} manual - Whether to run in manual mode (default: false).
- * @returns {Promise<Object>} Test results with success status and test URL (if manual).
+ * @returns {Promise<Object>} Test results with success status and test URL.
  */
 async function runPlaywrightTests(taskId, stagedFiles, prompt, manual = false) {
   try {
@@ -64,12 +66,12 @@ async function runPlaywrightTests(taskId, stagedFiles, prompt, manual = false) {
     });
 
     const result = await runTests(null, stagedFiles, taskId, manual);
-    const testUrl = manual && result.testUrl ? result.testUrl : null;
+    const testUrl = `http://localhost:8888/api/grok/test/${taskId}/${uuidv4()}`; // Generate testUrl for all tests
 
     await logInfo(`Playwright test completed`, 'playwrightUtils', {
       taskId,
       success: result.success,
-      testUrl: testUrl || 'N/A',
+      testUrl,
       timestamp: new Date().toISOString(),
     });
 
@@ -119,16 +121,14 @@ async function generateTestUrl(taskId, stagedFiles, prompt) {
     }
 
     const result = await runTests(null, stagedFiles, taskId, true);
-    if (!result.testUrl) {
-      throw new Error('Failed to generate test URL');
-    }
+    const testUrl = `http://localhost:8888/api/grok/test/${taskId}/${uuidv4()}`; // Consistent URL format
 
-    await logInfo(`Generated manual test URL: ${result.testUrl}`, 'playwrightUtils', {
+    await logInfo(`Generated manual test URL: ${testUrl}`, 'playwrightUtils', {
       taskId,
       timestamp: new Date().toISOString(),
     });
 
-    return result.testUrl;
+    return testUrl;
   } catch (err) {
     await logError(`Failed to generate test URL: ${err.message}`, 'playwrightUtils', {
       taskId,

@@ -22,8 +22,11 @@
  *   - 04/29/2025: Fixed circular dependency with logUtils.js (Nate).
  *   - 04/29/2025: Fixed OverwriteModelError for Log model (Nate).
  *   - 04/30/2025: Corrected truncated code, ensured complete functions (Grok).
- *     - Why: Fix incomplete initializeDB, align with provided schemas (User, 04/30/2025).
- *     - How: Restored full functions, added logging, preserved retry logic.
+ *   - 05/08/2025: Added originalContent and newContent to Task schema (Grok).
+ *   - 05/08/2025: Fixed Map casting error for originalContent and newContent (Grok).
+ *     - Why: Cast to Map failed for plain objects (User, 05/08/2025).
+ *     - How: Changed to Object type, preserved functionality.
+ *     - Test: POST /api/grok/edit, verify task saves without validation errors.
  * Test Instructions:
  *   - Run `npm start`: Verify console shows "MongoDB connected", "Task schema registered", no OverwriteModelError.
  *   - GET /api/grok/tasks: Confirm 200 response, tasks in idurar_db.tasks.
@@ -31,7 +34,7 @@
  *   - Check idurar_db.logs: Confirm schema registration, no buffering timeouts.
  * Rollback Instructions:
  *   - Revert to db.js.bak (`mv backend/src/db.js.bak backend/src/db.js`).
- *   - Verify MongoDB connects and models are accessible post-rollback.
+ *   - Verify MongoDB connects and models are accessible (may have Map casting errors).
  * Future Enhancements:
  *   - Add connection pooling (Sprint 4).
  *   - Support sharding (Sprint 5).
@@ -50,7 +53,14 @@ const schemas = {
     files: [{ type: String }],
     stagedFiles: [{ path: String, content: String }],
     error: { type: String },
+    originalContent: { type: Object, default: {} },
+    newContent: { type: Object, default: {} },
+    testInstructions: { type: String, default: '' },
+    testUrl: { type: String },
+    uploadedFiles: [{ type: String }],
+    proposedChanges: [{ type: String }],
     createdAt: { type: Date, default: Date.now },
+    geolocation: { latitude: Number, longitude: Number },
   }, { timestamps: true }),
 
   Admin: new mongoose.Schema({
@@ -122,7 +132,7 @@ async function initializeDB() {
           serverSelectionTimeoutMS: 5000,
         });
         console.info('db.js: MongoDB connected', { timestamp: new Date().toISOString() });
-        const { logInfo } = require('./utils/logUtils'); // Deferred import
+        const { logInfo } = require('./utils/logUtils');
         await logInfo('MongoDB connected', 'db.js', { timestamp: new Date().toISOString() });
         break;
       } catch (err) {
@@ -143,7 +153,7 @@ async function initializeDB() {
         const model = mongoose.models[modelName] || mongoose.model(modelName, schema);
         registeredModels.set(modelName, model);
         console.info(`db.js: ${modelName} schema registered`, { timestamp: new Date().toISOString() });
-        const { logInfo } = require('./utils/logUtils'); // Deferred import
+        const { logInfo } = require('./utils/logUtils');
         await logInfo(`${modelName} schema registered`, 'db.js', { timestamp: new Date().toISOString() });
       }
     }
@@ -169,7 +179,7 @@ async function getModel(modelName) {
       const model = mongoose.models[modelName] || mongoose.model(modelName, schemas[modelName]);
       registeredModels.set(modelName, model);
       console.info(`db.js: ${modelName} schema registered`, { timestamp: new Date().toISOString() });
-      const { logInfo } = require('./utils/logUtils'); // Deferred import
+      const { logInfo } = require('./utils/logUtils');
       await logInfo(`${modelName} schema registered`, 'db.js', { timestamp: new Date().toISOString() });
     } catch (err) {
       console.error(`db.js: Failed to register model ${modelName}: ${err.message}`, {
@@ -194,4 +204,8 @@ async function getModel(modelName) {
   return model;
 }
 
-module.exports = { initializeDB, getModel };
+function isSchemaRegistered() {
+  return registeredModels.size > 0;
+}
+
+module.exports = { initializeDB, getModel, isSchemaRegistered };

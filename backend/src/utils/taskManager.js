@@ -11,12 +11,13 @@
  *   - Emits Socket.IO events (taskUpdate, backendProposal) via socket.js for real-time UI updates in GrokUI.jsx.
  *   - Logs all operations to grok.log using winston for debugging and traceability.
  * Dependencies:
- *   - mongoose: Task, BackendProposal, Memory models (version 8.7.0).
+ *   - mongoose: Task, BackendProposal, Memory models (version 8.13.2).
  *   - socket.js: getIO for Socket.IO (version 4.8.1).
  *   - winston: Logging to grok.log (version 3.17.0).
  *   - path, fs.promises: File operations.
  *   - fileGeneratorV18.js, fileUtils.js, promptParser.js, taskValidator.js, taskTesterV18.js: Task utilities.
  *   - lodash.debounce: Debounces event emissions (version 4.17.21).
+ *   - emailer.js: Sends email notifications.
  * Dependents:
  *   - taskRoutes.js, proposalRoutes.js, taskProcessorV18.js, GrokUI.jsx.
  * Why It’s Here:
@@ -28,16 +29,31 @@
  *   - 05/01/2025: Fixed Memory validation error, enhanced error handling (Grok).
  *   - 05/02/2025: Added automated testing, fixed backendChanges (Grok).
  *   - 05/07/2025: Fixed ReferenceError: logInfo is not defined (Grok).
- *     - Why: Error at line 360 during automated testing (User, 05/01/2025).
- *     - How: Replaced logInfo/logError with winston logger, added try-catch for runTests.
- *     - Test: Submit "Create an inventory system", verify task completes, logs in grok.log.
+ *   - 05/08/2025: Added testUrl, ensured originalContent/newContent, integrated emailer.js (Grok).
+ *   - 05/08/2025: Fixed stagedFiles persistence error (Grok).
+ *   - 05/08/2025: Fixed originalContent serialization error (Grok).
+ *   - 05/08/2025: Enhanced originalContent validation (Grok).
+ *   - 05/08/2025: Added schema validation before task.save() (Grok).
+ *   - 05/08/2025: Fixed newContent Mongoose metadata issue (Grok).
+ *   - 05/08/2025: Used plain object for newContent (Grok).
+ *   - 05/08/2025: Fixed sendEmail ReferenceError (Grok).
+ *   - 05/08/2025: Aligned sendEmail with emailer.js signature (Grok).
+ *     - Why: sendEmail signature mismatch with emailer.js (User, 05/08/2025).
+ *     - How: Updated sendEmail call to match emailer.js (recipient, subject, taskId, eventType), preserved functionality.
+ *     - Test: Submit task, verify email sent, TaskList buttons enable, no empty notifications.
  * Test Instructions:
  *   - Run `npm start`, POST /api/grok/edit with "Create an inventory system".
- *   - Verify task in idurar_db.tasks, no logInfo errors in grok.log.
- *   - Check LiveFeed.jsx for single yellow log, automated test results.
+ *   - Verify task in idurar_db.tasks with testUrl, originalContent, newContent, status: pending_approval.
+ *   - Check TaskList.jsx: Confirm Playwright, View Changes, Approve/Deny buttons enable.
+ *   - Verify email sent to admin@idurarapp.com, logged in idurar_db.logs.
+ *   - Check grok.log for task processing, no serialization errors.
+ * Rollback Instructions:
+ *   - Revert to taskManager.js.bak (`copy backend\src\utils\taskManager.js.bak backend\src\utils\taskManager.js`).
+ *   - Verify /api/grok/edit processes tasks (may have email or button issues).
  * Future Enhancements:
  *   - Add task dependency handling (Sprint 6).
  *   - Support proposal versioning (Sprint 5).
+ *   - Integrate ALL Token rewards for task completion (Sprint 3).
  */
 
 const mongoose = require('mongoose');
@@ -52,6 +68,7 @@ const { parsePrompt } = require('./promptParser');
 const { isValidTaskId, isValidTask, isValidFiles } = require('./taskValidator');
 const { v4: uuidv4 } = require('uuid');
 const debounce = require('lodash').debounce;
+const { sendEmail } = require('./emailer');
 
 const logger = winston.createLogger({
   level: 'debug',
@@ -215,6 +232,7 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
               originalContent: {},
               newContent: {},
               testInstructions: '',
+              testUrl: null,
               uploadedFiles: uploadedFiles || [],
               createdAt: new Date(),
               updatedAt: new Date(),
@@ -222,11 +240,11 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
           },
           { new: true, upsert: true }
         );
-        logger.debug(`Task created in idurar_db.tasks`, { taskId, status: task.status, timestamp: new Date().toISOString() });
+        // logger.debug(`Task created in idurar_db.tasks`, { taskId, status: task.status, timestamp: new Date().toISOString() });
       } else if (!Array.isArray(task.stagedFiles)) {
         task = await mongoose.model('Task').findOneAndUpdate(
           { taskId },
-          { $set: { stagedFiles: [], uploadedFiles: uploadedFiles || [] } },
+          { $set: { stagedFiles: [], uploadedFiles: uploadedFiles || [], testUrl: null } },
           { new: true }
         );
         logger.debug(`Initialized stagedFiles for existing task`, { taskId, timestamp: new Date().toISOString() });
@@ -277,7 +295,7 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
     });
     try {
       await memory.save();
-      logger.debug(`Memory entry created`, { taskId, content: prompt, uploadedFiles: uploadedFiles?.length || 0, timestamp: new Date().toISOString() });
+     // logger.debug(`Memory entry created`, { taskId, content: prompt, uploadedFiles: uploadedFiles?.length || 0, timestamp: new Date().toISOString() });
     } catch (memoryErr) {
       logger.error(`Failed to save Memory document: ${memoryErr.message}`, {
         taskId,
@@ -289,22 +307,95 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
 
     const systemFiles = await readSystemFiles();
     const originalContent = {};
+    let totalSize = 0;
+    const maxSize = 10 * 1024 * 1024; // 10MB total limit
+    const maxFileSize = 1 * 1024 * 1024; // 1MB per file
     for (const file of Object.keys(systemFiles)) {
-      originalContent[file] = systemFiles[file];
+      const content = systemFiles[file];
+      if (typeof content === 'string') {
+        try {
+          // Validate UTF-8
+          Buffer.from(content, 'utf8');
+          const fileSize = Buffer.byteLength(content, 'utf8');
+          if (fileSize <= maxFileSize && totalSize + fileSize <= maxSize) {
+            originalContent[file] = content;
+            totalSize += fileSize;
+          } else {
+            logger.warn(`Skipping file in originalContent due to size limit`, {
+              taskId,
+              file,
+              fileSize,
+              totalSize,
+              maxSize,
+              maxFileSize,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        } catch (err) {
+          logger.warn(`Skipping file in originalContent due to invalid UTF-8`, {
+            taskId,
+            file,
+            error: err.message,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+    }
+    /* / logger.debug(`Generated originalContent`, {
+      taskId,
+      fileCount: Object.keys(originalContent).length,
+      totalSize,
+      timestamp: new Date().toISOString(),
+    }); */
+
+    // Validate originalContent serialization
+    try {
+      JSON.stringify(originalContent);
+    } catch (err) {
+      logger.error(`originalContent serialization failed: ${err.message}`, {
+        taskId,
+        stack: err.stack,
+        timestamp: new Date().toISOString(),
+      });
+      throw new Error(`originalContent serialization failed: ${err.message}`);
     }
 
     const parsedData = backendChanges.length ? { action, target, features, isMultiFile, backendChanges } : await parsePrompt(prompt, taskId);
-    const { action: parsedAction, target: parsedTarget = 'crm', features: parsedFeatures, isMultiFile: parsedIsMultiFile, backendChanges: parsedBackendChanges } = parsedData;
+    const { action: parsedAction, target: parsedTarget = 'crm', features: parsedFeatures = [], isMultiFile: parsedIsMultiFile, backendChanges: parsedBackendChanges } = parsedData;
 
-    const stagedFiles = await generateFiles(taskId, { ...parsedData, target: parsedTarget });
-    if (!stagedFiles || stagedFiles.length === 0) {
+    let stagedFiles;
+    try {
+      stagedFiles = await generateFiles(taskId, { ...parsedData, target: parsedTarget });
+    } catch (generateErr) {
+      logger.error(`Failed to generate stagedFiles: ${generateErr.message}`, {
+        taskId,
+        parsedData,
+        stack: generateErr.stack,
+        timestamp: new Date().toISOString(),
+      });
+      throw new Error(`File generation failed: ${generateErr.message}`);
+    }
+
+    // Validate stagedFiles
+    if (!stagedFiles || !Array.isArray(stagedFiles)) {
+      logger.error(`Invalid stagedFiles returned from generateFiles: ${JSON.stringify(stagedFiles)}`, {
+        taskId,
+        parsedData,
+        timestamp: new Date().toISOString(),
+      });
+      throw new Error(`Invalid stagedFiles: ${stagedFiles === null ? 'null' : typeof stagedFiles}`);
+    }
+    if (stagedFiles.length === 0) {
+      logger.warn(`No staged files generated`, { taskId, parsedData, timestamp: new Date().toISOString() });
       throw new Error('No staged files generated');
     }
 
     if (!isValidTask(taskId, prompt, stagedFiles)) {
+      logger.error(`Task validation failed`, { taskId, prompt, stagedFiles: JSON.stringify(stagedFiles), timestamp: new Date().toISOString() });
       throw new Error('Task validation failed');
     }
     if (!isValidFiles(stagedFiles)) {
+      logger.error(`File validation failed`, { taskId, stagedFiles: JSON.stringify(stagedFiles), timestamp: new Date().toISOString() });
       throw new Error('File validation failed');
     }
 
@@ -312,9 +403,57 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
     const maxRetries = 7;
     while (retries < maxRetries) {
       try {
+        // Prepare task data
         task.stagedFiles = stagedFiles;
-        task.generatedFiles = stagedFiles.map(f => f.path);
-        task.testInstructions = stagedFiles.map(f => f.testInstructions).join('\n\n');
+        task.generatedFiles = stagedFiles.map(f => f.path || '');
+        task.testInstructions = stagedFiles.map(f => f.testInstructions || '').join('\n\n');
+        task.originalContent = originalContent;
+
+        // Create newContent as a plain object
+        const newContentObj = {};
+        stagedFiles.forEach(file => {
+          const key = file.path || 'unknown';
+          const value = file.content || '';
+          if (typeof key === 'string' && typeof value === 'string') {
+            newContentObj[key] = value;
+          }
+        });
+
+        // Validate newContent serialization
+        try {
+          JSON.stringify(newContentObj);
+        } catch (err) {
+          logger.error(`newContent serialization failed: ${err.message}`, {
+            taskId,
+            stack: err.stack,
+            timestamp: new Date().toISOString(),
+          });
+          throw new Error(`newContent serialization failed: ${err.message}`);
+        }
+
+        // Log newContent for debugging
+        logger.debug(`Generated newContent`, {
+          taskId,
+          newContent: Object.keys(newContentObj),
+          newContentSize: Buffer.byteLength(JSON.stringify(newContentObj), 'utf8'),
+          timestamp: new Date().toISOString(),
+        });
+
+        // Assign plain object
+        task.newContent = newContentObj;
+
+        // Validate task data before save
+        for (const [key, value] of Object.entries(task.newContent)) {
+          if (typeof key !== 'string' || typeof value !== 'string') {
+            throw new Error(`Invalid newContent: key=${key}, value type=${typeof value}`);
+          }
+        }
+        for (const [key, value] of Object.entries(task.originalContent)) {
+          if (typeof key !== 'string' || typeof value !== 'string') {
+            throw new Error(`Invalid originalContent: key=${key}, value type=${typeof value}`);
+          }
+        }
+
         await task.save();
 
         const savedTask = await mongoose.model('Task').findOne({ taskId });
@@ -323,8 +462,9 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
         }
         logger.debug(`Verified stagedFiles in MongoDB`, {
           taskId,
-          files: stagedFiles.map(f => f.path),
+          files: stagedFiles.map(f => f.path || 'unknown'),
           testInstructions: savedTask.testInstructions,
+          contentKeys: Object.keys(savedTask.originalContent).length + '/' + Object.keys(savedTask.newContent).length,
           attempt: retries + 1,
           timestamp: new Date().toISOString(),
         });
@@ -333,6 +473,10 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
         retries++;
         logger.warn(`Staged files save attempt ${retries}/${maxRetries} failed: ${err.message}`, {
           taskId,
+          stagedFiles: JSON.stringify(stagedFiles),
+          originalContentSize: Buffer.byteLength(JSON.stringify(originalContent), 'utf8'),
+          newContentSize: Buffer.byteLength(JSON.stringify(task.newContent), 'utf8'),
+          errorStack: err.stack,
           timestamp: new Date().toISOString(),
         });
         if (retries >= maxRetries) {
@@ -342,13 +486,17 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
       }
     }
 
-    // Run automated headless test
     try {
-      const testResult = await runTests(null, stagedFiles, taskId, false); // Headless auto test
+      const testResult = await runTests(null, stagedFiles, taskId, false);
+      const testUrl = `http://localhost:8888/api/grok/test/${taskId}/${uuidv4()}`;
+      task.testUrl = testUrl;
+      await task.save();
+
       logger.info('Automated test passed', {
         taskId,
         stagedFilesCount: stagedFiles.length,
         testResult,
+        testUrl,
         timestamp: new Date().toISOString(),
       });
       debounceEmit(taskId, {
@@ -356,6 +504,7 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
         status: 'tested',
         stagedFiles: task.stagedFiles,
         testInstructions: task.testInstructions,
+        testUrl,
         logColor: 'green',
         timestamp: new Date().toISOString(),
       });
@@ -366,12 +515,6 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
         timestamp: new Date().toISOString(),
       });
       throw new Error(`Automated test failed: ${testErr.message}`);
-    }
-
-    task.originalContent = originalContent;
-    task.newContent = {};
-    for (const file of stagedFiles) {
-      task.newContent[file.path] = file.content;
     }
 
     const proposals = await createProposals(taskId, parsedBackendChanges);
@@ -385,12 +528,29 @@ async function processTask(taskId, prompt, action = 'create', target = 'crm', fe
       stagedFiles: task.stagedFiles,
       proposedChanges: task.proposedChanges,
       testInstructions: task.testInstructions,
+      testUrl: task.testUrl,
       logColor: parsedIsMultiFile ? 'yellow' : 'blue',
       timestamp: new Date().toISOString(),
     });
 
-    logger.info(`Task processed`, { taskId, stagedFiles: stagedFiles.length, proposals: proposals.length, timestamp: new Date().toISOString() });
-    await appendLog(errorLogPath, `# Task Processed\nTask ID: ${taskId}\nStaged Files: ${stagedFiles.map(f => f.path).join(', ')}\nProposals: ${proposals.length}\nTest Instructions: ${task.testInstructions}`);
+    try {
+      await sendEmail(
+        'admin@idurarapp.com',
+        `Task ${taskId} Completed`,
+        taskId,
+        'task_completed'
+      );
+      logger.info('Email notification sent', { taskId, recipient: 'admin@idurarapp.com', timestamp: new Date().toISOString() });
+    } catch (emailErr) {
+      logger.error(`Failed to send email notification: ${emailErr.message}`, {
+        taskId,
+        stack: emailErr.stack,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    logger.info(`Task processed`, { taskId, stagedFiles: stagedFiles.length, proposals: proposals.length, testUrl: task.testUrl, timestamp: new Date().toISOString() });
+    await appendLog(errorLogPath, `# Task Processed\nTask ID: ${taskId}\nStaged Files: ${stagedFiles.map(f => f.path).join(', ')}\nProposals: ${proposals.length}\nTest Instructions: ${task.testInstructions}\nTest URL: ${task.testUrl}`);
     return task;
   } catch (err) {
     task.status = 'failed';

@@ -6,11 +6,11 @@
  *   - Validates Log model, falls back to console if invalid or unavailable.
  *   - Implements retry logic with exponential backoff to handle buffering timeouts.
  * Mechanics:
- *   - Uses db.js getModel to access Log model, avoiding circular dependencies.
- *   - Retries failed writes up to 3 times with 500ms, 1s, 2s delays.
+ *   - Uses mongoose.model to access Log model, avoiding circular dependencies.
+ *   - Retries failed writes up to 3 times with 1s, 2s, 4s delays.
  *   - Validates inputs (message, context) to prevent invalid logs.
  * Dependencies:
- *   - db.js: getModel for Log model access.
+ *   - mongoose: MongoDB ORM (version 8.13.2).
  * Why It's Here:
  *   - Unifies MongoDB logging for Sprint 2, fixing buffering timeout errors (User, 04/30/2025).
  * Change Log:
@@ -18,9 +18,11 @@
  *   - 05/02/2025: Added Log model validation and console fallback (Nate).
  *   - 04/29/2025: Fixed circular dependency with db.js (Nate).
  *   - 04/29/2025: Fixed OverwriteModelError for Log model (Nate).
- *   - 04/30/2025: Aligned with provided version, optimized retry logic (Grok).
- *     - Why: Fix operation logs.insertOne() buffering timed out (User, 04/30/2025).
- *     - How: Simplified retry logic, ensured console fallback, aligned with provided code.
+ *   - 04/30/2025: Optimized retry logic, added console fallback (Grok).
+ *   - 05/04/2025: Increased timeout to 30s, improved retry delays (Grok).
+ *     - Why: Persistent logs.insertOne() buffering timeout errors (User, 05/04/2025).
+ *     - How: Set maxTimeMS to 30s, adjusted retry delays to 1s, 2s, 4s, added detailed error logging.
+ *     - Test: Run `npm start`, submit task, verify idurar_db.logs, no timeout errors.
  * Test Instructions:
  *   - Run `npm start`: Confirm idurar_db.logs shows startup logs (e.g., "Server running on port 8888"), no buffering timeout errors.
  *   - POST /api/grok/edit with "Build CRM system": Verify task creation logs in idurar_db.logs, no timeouts.
@@ -34,163 +36,104 @@
  *   - Support log analytics (Sprint 5).
  */
 
-let LogModel = null;
+const mongoose = require('mongoose');
+
+let Log = null;
 
 async function initializeLogModel() {
-  if (!LogModel) {
+  if (!Log) {
     try {
-      const { getModel } = require('../db'); // Deferred import to avoid circular dependency
-      LogModel = await getModel('Log');
-      if (typeof LogModel.create !== 'function') {
-        throw new Error('Log model invalid: Missing create method');
-      }
-      console.info('logUtils.js: Log model initialized', { timestamp: new Date().toISOString() });
+      const logSchema = new mongoose.Schema({
+        level: String,
+        message: String,
+        context: String,
+        details: Object,
+        timestamp: { type: Date, default: Date.now },
+      });
+      Log = mongoose.model('Log', logSchema, 'logs');
+      console.log('logUtils.js: Log model initialized', { timestamp: new Date().toISOString() });
     } catch (err) {
-      console.error('logUtils.js: Failed to initialize Log model:', err.message, { timestamp: new Date().toISOString() });
-      LogModel = null;
+      console.error('logUtils.js: Failed to initialize Log model', {
+        error: err.message,
+        stack: err.stack,
+        timestamp: new Date().toISOString(),
+      });
+      Log = null;
     }
   }
-  return LogModel;
+  return Log;
+}
+
+async function log(level, message, context, details) {
+  try {
+    if (!message || typeof message !== 'string' || !context || typeof context !== 'string') {
+      throw new Error('Invalid log message or context');
+    }
+    const LogModel = await initializeLogModel();
+    if (LogModel) {
+      let attempt = 0;
+      const maxAttempts = 3;
+      while (attempt < maxAttempts) {
+        try {
+          await LogModel.create(
+            {
+              level,
+              message,
+              context,
+              details,
+              timestamp: new Date(),
+            },
+            { maxTimeMS: 30000 } // 30s timeout
+          );
+          return;
+        } catch (err) {
+          attempt++;
+          console.warn('logUtils.js: Log attempt failed', {
+            attempt,
+            maxAttempts,
+            error: err.message,
+            message,
+            context,
+            timestamp: new Date().toISOString(),
+          });
+          if (attempt >= maxAttempts) {
+            throw new Error(`Failed to log after ${maxAttempts} attempts: ${err.message}`);
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt))); // 1s, 2s, 4s
+        }
+      }
+    } else {
+      console.log(`logUtils.js: [${level.toUpperCase()}]`, { message, context, details, timestamp: new Date().toISOString() });
+    }
+  } catch (err) {
+    console.error('logUtils.js: Log failed', {
+      level,
+      message,
+      context,
+      details,
+      error: err.message,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
+  }
 }
 
 async function logInfo(message, context, details = {}) {
-  try {
-    if (!message || typeof message !== 'string' || !context || typeof context !== 'string') {
-      throw new Error('Invalid log message or context');
-    }
-    const Log = await initializeLogModel();
-    if (Log) {
-      let attempt = 0;
-      const maxAttempts = 3;
-      while (attempt < maxAttempts) {
-        try {
-          await Log.create({
-            level: 'info',
-            message,
-            context,
-            details,
-            timestamp: new Date().toISOString(),
-          });
-          break;
-        } catch (err) {
-          attempt++;
-          if (attempt >= maxAttempts) {
-            throw new Error(`Failed to log after ${maxAttempts} attempts: ${err.message}`);
-          }
-          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-        }
-      }
-    } else {
-      console.info('logUtils.js: [INFO]', { message, context, details, timestamp: new Date().toISOString() });
-    }
-  } catch (err) {
-    console.error('logUtils.js: logInfo failed:', err.message, { message, context, details, timestamp: new Date().toISOString() });
-  }
-}
-
-async function logDebug(message, context, details = {}) {
-  try {
-    if (!message || typeof message !== 'string' || !context || typeof context !== 'string') {
-      throw new Error('Invalid log message or context');
-    }
-    const Log = await initializeLogModel();
-    if (Log) {
-      let attempt = 0;
-      const maxAttempts = 3;
-      while (attempt < maxAttempts) {
-        try {
-          await Log.create({
-            level: 'debug',
-            message,
-            context,
-            details,
-            timestamp: new Date().toISOString(),
-          });
-          break;
-        } catch (err) {
-          attempt++;
-          if (attempt >= maxAttempts) {
-            throw new Error(`Failed to log after ${maxAttempts} attempts: ${err.message}`);
-          }
-          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-        }
-      }
-    } else {
-      console.debug('logUtils.js: [DEBUG]', { message, context, details, timestamp: new Date().toISOString() });
-    }
-  } catch (err) {
-    console.error('logUtils.js: logDebug failed:', err.message, { message, context, details, timestamp: new Date().toISOString() });
-  }
+  await log('info', message, context, details);
 }
 
 async function logWarn(message, context, details = {}) {
-  try {
-    if (!message || typeof message !== 'string' || !context || typeof context !== 'string') {
-      throw new Error('Invalid log message or context');
-    }
-    const Log = await initializeLogModel();
-    if (Log) {
-      let attempt = 0;
-      const maxAttempts = 3;
-      while (attempt < maxAttempts) {
-        try {
-          await Log.create({
-            level: 'warn',
-            message,
-            context,
-            details,
-            timestamp: new Date().toISOString(),
-          });
-          break;
-        } catch (err) {
-          attempt++;
-          if (attempt >= maxAttempts) {
-            throw new Error(`Failed to log after ${maxAttempts} attempts: ${err.message}`);
-          }
-          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-        }
-      }
-    } else {
-      console.warn('logUtils.js: [WARN]', { message, context, details, timestamp: new Date().toISOString() });
-    }
-  } catch (err) {
-    console.error('logUtils.js: logWarn failed:', err.message, { message, context, details, timestamp: new Date().toISOString() });
-  }
+  await log('warn', message, context, details);
 }
 
 async function logError(message, context, details = {}) {
-  try {
-    if (!message || typeof message !== 'string' || !context || typeof context !== 'string') {
-      throw new Error('Invalid log message or context');
-    }
-    const Log = await initializeLogModel();
-    if (Log) {
-      let attempt = 0;
-      const maxAttempts = 3;
-      while (attempt < maxAttempts) {
-        try {
-          await Log.create({
-            level: 'error',
-            message,
-            context,
-            details: { ...details, stack: details.stack || new Error().stack },
-            timestamp: new Date().toISOString(),
-          });
-          break;
-        } catch (err) {
-          attempt++;
-          if (attempt >= maxAttempts) {
-            throw new Error(`Failed to log after ${maxAttempts} attempts: ${err.message}`);
-          }
-          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-        }
-      }
-    } else {
-      console.error('logUtils.js: [ERROR]', { message, context, details: { ...details, stack: details.stack || new Error().stack }, timestamp: new Date().toISOString() });
-    }
-  } catch (err) {
-    console.error('logUtils.js: logError failed:', err.message, { message, context, details, timestamp: new Date().toISOString() });
+  await log('error', message, context, { ...details, stack: details.stack || new Error().stack });
+}
+
+async function logDebug(message, context, details = {}) {
+  if (process.env.NODE_ENV === 'development') {
+    await log('debug', message, context, details);
   }
 }
 
-module.exports = { logInfo, logDebug, logWarn, logError };
+module.exports = { logInfo, logWarn, logError, logDebug };

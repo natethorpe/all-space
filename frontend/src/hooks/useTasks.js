@@ -1,136 +1,189 @@
 /*
  * File Path: frontend/src/hooks/useTasks.js
- * Purpose: Manages task state and API interactions for Allur Space Console, handling task submission, fetching, and clearing.
+ * Purpose: Custom React hook for task management in Allur Space Console.
  * How It Works:
- *   - Uses React hooks to manage prompt, tasks, loading states, and submission status.
- *   - Interacts with /api/grok endpoints via serverApiConfig.js for task operations.
- *   - Logs errors to logClientError.js for debugging.
+ *   - Manages task state, submission, and synchronization with backend via REST API and Socket.IO.
+ *   - Fetches tasks from /api/grok/tasks, submits tasks to /api/grok/edit.
+ *   - Deduplicates socket tasks to prevent duplicates in TaskList.jsx.
+ *   - Uses debounced task fetching to reduce API calls.
+ * Mechanics:
+ *   - Uses useState for task state, useCallback for memoized functions, useEffect for socket syncing and polling.
+ *   - Validates token and socket connections before operations.
+ *   - Logs errors to idurar_db.logs via logClientError.js.
  * Dependencies:
- *   - React: useState, useEffect, useCallback (version 18.3.1).
- *   - axios: API requests via serverApiConfig.js (version 1.8.4).
- *   - antd: message for user notifications (version 5.24.6).
+ *   - React: useState, useCallback, useEffect (version 18.3.1).
+ *   - axios: API requests (version 1.7.7).
+ *   - socket.io-client: Real-time updates (version 4.8.1).
+ *   - lodash/debounce: Debounce task fetching (version 4.17.21).
+ *   - apiClient: Configured axios instance from serverApiConfig.js.
  *   - logClientError.js: Client-side error logging.
  * Dependents:
- *   - GrokUI.jsx: Uses hook for task input and list rendering.
- *   - TaskInput.jsx: Passes prompt, setPrompt, handleSubmit, clearTasks.
- *   - TaskList.jsx: Uses tasks and task management functions.
+ *   - TaskInput.jsx: Submits tasks via submitTask.
+ *   - TaskList.jsx: Displays tasks from tasks state.
+ *   - GrokUI.jsx: Provides token and messageApi.
  * Why It’s Here:
- *   - Centralizes task management logic for Sprint 2 (04/07/2025).
+ *   - Centralizes task logic for Sprint 2, fixing task status sync issues (User, 04/30/2025).
  * Change Log:
- *   - 04/07/2025: Initialized task management hook.
- *   - 04/23/2025: Fixed API error handling for /edit endpoint.
- *   - 04/29/2025: Fixed HTTP 500 error handling and loading states.
- *   - 04/29/2025: Added user-friendly error for network failures.
- *   - 04/30/2025: Used messageApi to fix [antd: message] warning (Grok).
- *     - Why: Warning due to static message.error calls (User, 04/30/2025).
- *     - How: Passed messageApi from GrokUI.jsx, replaced message.error with messageApi.error.
- *     - Test: Load /grok, submit task, verify no [antd: message] warning.
+ *   - 04/07/2025: Initialized task fetching and submission (Nate).
+ *   - 04/30/2025: Added socket task deduplication (Grok).
+ *   - 05/04/2025: Fixed 404 errors for task endpoints (Grok).
+ *     - Why: 404 Not Found for GET /tasks and POST /edit (User, 05/04/2025).
+ *     - How: Updated endpoints to /api/grok/tasks and /api/grok/edit, preserved functionality.
+ *     - Test: Load /grok, submit task, verify no 404 errors, task appears in TaskList.jsx.
  * Test Instructions:
- *   - Run `npm run dev`, navigate to /grok, submit "Build CRM system".
- *   - Verify no [antd: message] warning in console.
- *   - Trigger network error (stop backend), confirm error message via messageApi.
- *   - Check browser console for error logs via logClientError.
+ *   - Run `npm run dev`, navigate to /grok, submit "Create an inventory system".
+ *   - Verify task appears in TaskList.jsx, no 404 errors, socket tasks sync.
+ *   - Check console for 'useTasks: Syncing socket tasks' logs.
  * Rollback Instructions:
  *   - Revert to useTasks.js.bak (`mv frontend/src/hooks/useTasks.js.bak frontend/src/hooks/useTasks.js`).
- *   - Verify task submission works post-rollback.
+ *   - Verify /grok loads, tasks fetch (may have 404 errors).
  * Future Enhancements:
  *   - Add task filtering (Sprint 4).
- *   - Support task prioritization UI (Sprint 5).
+ *   - Support task prioritization (Sprint 5).
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import axios from 'axios';
+import debounce from 'lodash/debounce';
 import apiClient from '../config/serverApiConfig';
 import { logClientError } from '../utils/logClientError';
 
-const useTasks = (messageApi) => {
-  const [prompt, setPrompt] = useState('');
+const useTasks = ({ token, messageApi }) => {
   const [tasks, setTasks] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [buttonLoading, setButtonLoading] = useState({ submit: false, clear: false });
 
-  const fetchTasks = useCallback(async () => {
-    try {
-      const response = await apiClient.get('/grok/tasks');
-      if (response.data.success) {
-        setTasks(response.data.tasks);
-      } else {
-        throw new Error('Failed to fetch tasks');
-      }
-    } catch (error) {
-      const isNetworkError = error.code === 'ERR_NETWORK' || error.message.includes('Network Error');
-      const errorMessage = isNetworkError ? 'Backend server is unavailable. Please try again later.' : error.message;
-      messageApi.error(errorMessage);
-      logClientError({
-        message: `Failed to fetch tasks: ${error.message}`,
-        context: 'useTasks',
-        details: { stack: error.stack, timestamp: new Date().toISOString() },
-      });
-      console.error('useTasks: XHR failed loading: GET "/grok/tasks".', error);
-    }
-  }, [messageApi]);
-
-  const handleSubmit = useCallback(async () => {
-    if (!prompt.trim() || isSubmitting) return;
-    setIsSubmitting(true);
-    setButtonLoading(prev => ({ ...prev, submit: true }));
-
-    try {
-      const response = await apiClient.post('/grok/edit', { prompt });
-      if (response.data.success) {
-        setTasks(prev => [response.data.task, ...prev]);
-        setPrompt('');
-      } else {
-        throw new Error(response.data.message || 'Task submission failed');
-      }
-    } catch (error) {
-      const isNetworkError = error.code === 'ERR_NETWORK' || error.message.includes('Network Error');
-      const errorMessage = isNetworkError ? 'Backend server is unavailable. Please try again later.' : error.message;
-      messageApi.error(errorMessage);
-      logClientError({
-        message: `useTasks: handleSubmit error: ${error.message}`,
-        context: 'useTasks',
-        details: {
-          method: 'POST',
-          url: 'http://localhost:8888/api/grok/edit',
-          status: error.response?.status,
+  const fetchTasks = useCallback(
+    debounce(async (taskId = null) => {
+      try {
+        const params = taskId ? { taskId } : {};
+        const response = await axios.get(`${apiClient.defaults.baseURL}tasks`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+        });
+        setTasks(response.data.tasks || []);
+        console.log('useTasks: Fetched tasks', {
+          taskCount: response.data.tasks?.length || 0,
+          taskId,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+        console.error('useTasks: Fetch tasks failed', {
+          error: errorMessage,
           stack: error.stack,
           timestamp: new Date().toISOString(),
-        },
-      });
-    } finally {
-      setIsSubmitting(false);
-      setButtonLoading(prev => ({ ...prev, submit: false }));
-    }
-  }, [prompt, isSubmitting, messageApi]);
+        });
+        logClientError({
+          message: errorMessage,
+          context: 'useTasks',
+          details: { error: errorMessage, stack: error.stack, timestamp: new Date().toISOString() },
+        });
+        messageApi?.error(`Failed to fetch tasks: ${errorMessage}`);
+      }
+    }, 1000),
+    [token, messageApi]
+  );
+
+  const submitTask = useCallback(
+    async (prompt, files = []) => {
+      if (!token) {
+        const errorMessage = 'Authentication token is missing';
+        console.error('useTasks: Submit task failed', {
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+        });
+        logClientError({
+          message: errorMessage,
+          context: 'useTasks',
+          details: { timestamp: new Date().toISOString() },
+        });
+        messageApi?.error(errorMessage);
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        const formData = new FormData();
+        formData.append('prompt', prompt);
+        formData.append('requestId', Math.random().toString(36).substring(2));
+        files.forEach((file) => {
+          if (file.originFileObj) {
+            formData.append('files', file.originFileObj, file.name);
+          }
+        });
+
+        const response = await axios.post(`${apiClient.defaults.baseURL}edit`, formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        console.log('useTasks: Task submitted', {
+          taskId: response.data.task?.taskId,
+          prompt,
+          fileCount: files.length,
+          timestamp: new Date().toISOString(),
+        });
+        fetchTasks();
+      } catch (error) {
+        const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+        console.error('useTasks: Submit task failed', {
+          error: errorMessage,
+          stack: error.stack,
+          timestamp: new Date().toISOString(),
+        });
+        logClientError({
+          message: errorMessage,
+          context: 'useTasks',
+          details: { error: errorMessage, stack: error.stack, timestamp: new Date().toISOString() },
+        });
+        messageApi?.error(`Failed to submit task: ${errorMessage}`);
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [token, messageApi, fetchTasks]
+  );
 
   const clearTasks = useCallback(async () => {
-    setButtonLoading(prev => ({ ...prev, clear: true }));
     try {
-      const response = await apiClient.delete('/grok/clear-tasks');
-      if (response.data.success) {
-        setTasks([]);
-      } else {
-        throw new Error('Failed to clear tasks');
-      }
-    } catch (error) {
-      const isNetworkError = error.code === 'ERR_NETWORK' || error.message.includes('Network Error');
-      const errorMessage = isNetworkError ? 'Backend server is unavailable. Please try again later.' : error.message;
-      messageApi.error(errorMessage);
-      logClientError({
-        message: `Failed to clear tasks: ${error.message}`,
-        context: 'useTasks',
-        details: { stack: error.stack, timestamp: new Date().toISOString() },
+      await axios.delete(`${apiClient.defaults.baseURL}clear-tasks`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-    } finally {
-      setButtonLoading(prev => ({ ...prev, clear: false }));
+      setTasks([]);
+      console.log('useTasks: Tasks cleared', { timestamp: new Date().toISOString() });
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+      console.error('useTasks: Clear tasks failed', {
+        error: errorMessage,
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+      });
+      logClientError({
+        message: errorMessage,
+        context: 'useTasks',
+        details: { error: errorMessage, stack: error.stack, timestamp: new Date().toISOString() },
+      });
+      messageApi?.error(`Failed to clear tasks: ${errorMessage}`);
     }
-  }, [messageApi]);
+  }, [token, messageApi]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    if (token) {
+      fetchTasks();
+      const interval = setInterval(fetchTasks, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [token, fetchTasks]);
 
-  return { prompt, setPrompt, tasks, handleSubmit, clearTasks, isSubmitting, buttonLoading };
+  return {
+    tasks,
+    submitTask,
+    fetchTasks,
+    clearTasks,
+    isSubmitting,
+  };
 };
 
 export default useTasks;

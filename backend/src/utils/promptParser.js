@@ -29,14 +29,13 @@
  *   - 04/21/2025: Created to modularize prompt parsing.
  *   - 04/23/2025: Added regex for complex prompts and fixed path import error.
  *   - 04/29/2025: Added default features for CRM prompts to prevent empty features.
- *     - Why: Logs showed "No stagedFiles generated" due to empty features (User, 04/29/2025).
- *     - How: Added default features (login, dashboard) for CRM targets, enhanced logging, preserved all parsing logic.
  *   - 05/02/2025: Fixed invalid target parsing, added changeText, supported uploaded files (Grok).
- *     - Why: Fix target 'an' for inventory system, ensure backendChanges have changeText, include uploaded files (User, 05/02/2025).
- *     - How: Improved regex, added mock changeText, parsed uploaded files for features.
- *     - Test: Submit “Create inventory system with AI”, verify target=inventory, changeText in backendChanges.
+ *   - 05/02/2025: Deduplicated features in parsePrompt (Grok).
+ *     - Why: Prevent duplicate features (e.g., ["inventory", "inventory"]) in parsedData (User, 05/02/2025).
+ *     - How: Used Set to unique featureMatches, preserved all parsing logic.
+ *     - Test: Submit “Create an inventory system”, verify features=["inventory"].
  * Test Instructions:
- *   - Submit “Create an impressive inventory keeping system with AI features” via /grok/edit: Verify parsedData includes action=create, target=inventory, features=[ai], changeText in backendChanges.
+ *   - Submit “Create an impressive inventory keeping system with AI features” via /grok/edit: Verify parsedData includes action=create, target=inventory, features=["inventory", "ai"], changeText in backendChanges.
  *   - Submit “Add MFA to login” with a file: Confirm backendChanges includes { file: 'auth.js', change: '...', description: 'Add MFA to login' }.
  *   - Submit invalid prompt: Verify red “Invalid prompt” log in LiveFeed.jsx.
  *   - Check idurar_db.logs: Confirm parsing logs with taskId, prompt, parsedData.
@@ -45,7 +44,7 @@
  *   - Integrate with taskPrioritizer.js (Sprint 6).
  * Self-Notes:
  *   - Nate: Added default CRM features to fix empty features issue, preserved all functionality (04/29/2025).
- *   - Grok: Fixed target parsing, added changeText, supported uploaded files (05/02/2025).
+ *   - Grok: Fixed target parsing, added changeText, supported uploaded files, deduplicated features (05/02/2025).
  */
 
 const winston = require('winston');
@@ -133,9 +132,9 @@ function parsePrompt(prompt, taskId, memory = [], fileNotes = [], logInsights = 
     }
   }
 
-  // Extract features
+  // Extract features and deduplicate
   const featureMatches = lowerPrompt.match(featureRegex) || [];
-  features = [...new Set(featureMatches.map(f => f.toLowerCase()))];
+  features = [...new Set(featureMatches.map(f => f.toLowerCase()))]; // Deduplicate features
 
   // Process uploaded files for additional features
   if (uploadedFiles && uploadedFiles.length > 0) {
@@ -166,7 +165,7 @@ function parsePrompt(prompt, taskId, memory = [], fileNotes = [], logInsights = 
     features = ['employee'];
   }
 
-  // Ensure unique features
+  // Ensure unique features after file processing
   features = [...new Set(features)];
 
   // Determine if multi-file
@@ -259,6 +258,9 @@ function parsePrompt(prompt, taskId, memory = [], fileNotes = [], logInsights = 
       reason: `Backend enhancement for task ${taskId}`,
     });
   }
+
+  // Final deduplication of features
+  features = [...new Set(features)];
 
   const parsedData = {
     action,

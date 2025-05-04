@@ -16,14 +16,21 @@
  *   - 04/07/2025: Initialized live feed with basic event rendering (Nate).
  *   - 04/29/2025: Fixed duplicate event rendering with eventId (Nate).
  *   - 05/02/2025: Added clear button, limited to 50 events (Grok).
- *     - Why: Prevent clutter, allow user to clear feed (User, 05/02/2025).
- *     - How: Added clearEvents, sliced events to 50, improved rendering.
- *     - Test: Submit tasks, verify 50 events max, clear feed, confirm empty.
+ *   - 05/08/2025: Fixed useLiveFeed parameter passing (Grok).
+ *   - 05/08/2025: Guarded against undefined events (Grok).
+ *   - 05/08/2025: Enhanced logging for skipped events (Grok).
+ *   - 05/04/2025: Added detailed event validation logging (Grok).
+ *     - Why: Events not rendering despite useLiveFeed.js processing (User, 05/04/2025).
+ *     - How: Added detailed logging for event validation failures, preserved functionality.
+ *     - Test: Load /grok, submit task, verify events render in LiveFeed.jsx, check logs for validation failures.
  * Test Instructions:
  *   - Run `npm run dev`, navigate to /grok, submit multiple tasks.
  *   - Verify events render with colors (green/yellow/red/blue), max 50 displayed.
  *   - Click "Clear Live Feed", confirm feed empties.
- *   - Check browser console: No duplicate event errors.
+ *   - Check browser console: No duplicate event errors or invalid event errors.
+ * Rollback Instructions:
+ *   - Revert to LiveFeed.jsx.bak (`mv frontend/src/components/LiveFeed.jsx.bak frontend/src/components/LiveFeed.jsx`).
+ *   - Verify /grok loads (may have rendering issues).
  * Future Enhancements:
  *   - Add event filtering by type (Sprint 3).
  *   - Support event persistence (Sprint 4).
@@ -33,19 +40,30 @@ import React, { useState } from 'react';
 import { List, Button } from 'antd';
 import useLiveFeed from '../hooks/useLiveFeed';
 import { logClientError } from '../utils/logClientError';
+import PropTypes from 'prop-types';
 
-const LiveFeed = () => {
-  const { events } = useLiveFeed();
+const LiveFeed = ({ token }) => {
+  const { feed: events = [] } = useLiveFeed({
+    singletonFlag: 'livefeed',
+    token,
+    maxEvents: 50,
+  });
   const [displayEvents, setDisplayEvents] = useState([]);
 
   // Limit to 50 events
   React.useEffect(() => {
-    const limitedEvents = events.slice(-50);
+    const limitedEvents = (events || []).slice(-50);
     setDisplayEvents(limitedEvents);
+    console.log('LiveFeed: Updated displayEvents', {
+      eventCount: limitedEvents.length,
+      eventIds: limitedEvents.map(event => event.id),
+      timestamp: new Date().toISOString(),
+    });
   }, [events]);
 
   const clearEvents = () => {
     setDisplayEvents([]);
+    console.log('LiveFeed: Cleared events', { timestamp: new Date().toISOString() });
   };
 
   const getEventColor = (event) => {
@@ -66,11 +84,23 @@ const LiveFeed = () => {
         dataSource={displayEvents}
         renderItem={(event) => {
           if (!event.data || !event.type) {
-            console.log('LiveFeed: Skipped invalid event', { event });
+            console.log('LiveFeed: Skipped invalid event', {
+              eventId: event.id,
+              hasData: !!event.data,
+              hasType: !!event.type,
+              event: JSON.stringify(event, null, 2),
+              timestamp: new Date().toISOString(),
+            });
             logClientError({
               message: 'Skipped invalid event: missing data or type',
               context: 'LiveFeed',
-              details: { event, timestamp: new Date().toISOString() },
+              details: {
+                eventId: event.id,
+                hasData: !!event.data,
+                hasType: !!event.type,
+                event,
+                timestamp: new Date().toISOString(),
+              },
             });
             return null;
           }
@@ -87,6 +117,10 @@ const LiveFeed = () => {
       />
     </div>
   );
+};
+
+LiveFeed.propTypes = {
+  token: PropTypes.string.isRequired,
 };
 
 export default LiveFeed;

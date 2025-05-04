@@ -1,159 +1,295 @@
 /*
  * File Path: frontend/src/hooks/useLiveFeed.js
- * Purpose: Manages WebSocket events for real-time updates in Allur Space Console, providing task and proposal events to LiveFeed.jsx.
+ * Purpose: Manages Socket.IO connection for live feed updates in Allur Space Console, displaying real-time task events.
  * How It Works:
- *   - Establishes a Socket.IO connection to receive taskUpdate, backendProposal, and feedback events.
- *   - Uses socketRegistry.js to prevent redundant connections.
- *   - Deduplicates events using eventId and debounces processing to avoid duplicate UI updates.
+ *   - Establishes a single Socket.IO connection to receive taskUpdate and backendProposal events from the backend.
+ *   - Maintains a feed of events (up to maxEvents) for display in LiveFeed.jsx.
+ *   - Uses socketRegistry.js to prevent redundant connections across components.
+ *   - Logs client-side errors to /api/grok/client-error for debugging.
+ * Mechanics:
+ *   - Initializes Socket.IO with JWT token from localStorage.auth, using polling transport to bypass WebSocket issues.
+ *   - Handles taskUpdate and backendProposal events, adding them to the feed with timestamp and color coding.
+ *   - Implements reconnection logic with exponential backoff (20s initial, 60s max, infinite attempts).
+ *   - Validates singletonFlag and token to ensure proper initialization.
  * Dependencies:
- *   - React: useState, useEffect, useRef (version 18.3.1).
- *   - socket.io-client: WebSocket client (version 4.8.1).
- *   - socketRegistry.js: Tracks socket instances.
- *   - logClientError.js: Client-side error logging.
- *   - lodash/debounce: Debounces event processing (version 4.17.21).
+ *   - React: useState, useEffect, useRef for state and lifecycle management (version 18.3.1).
+ *   - socket.io-client: WebSocket client for real-time communication (version 4.8.1).
+ *   - socketRegistry.js: Tracks socket instances to prevent duplicates.
+ *   - logClientError.js: Logs client-side errors to backend.
+ *   - serverApiConfig.js: Provides BASE_URL for Socket.IO connection.
  * Dependents:
- *   - LiveFeed.jsx: Consumes events for rendering.
- *   - GrokUI.jsx: Uses hook indirectly via LiveFeed.jsx.
+ *   - GrokUI.jsx: Uses hook to display live feed in LiveFeed.jsx.
+ *   - LiveFeed.jsx: Renders feed events.
  * Why It’s Here:
- *   - Enables real-time event handling for Sprint 2 (04/07/2025).
+ *   - Provides real-time task event feed for Sprint 2, enhancing user visibility into task progress (04/07/2025).
  * Change Log:
- *   - 04/07/2025: Initialized WebSocket hook for live feed.
- *   - 04/23/2025: Added event deduplication with eventId.
- *   - 04/29/2025: Fixed socketLiveFeed not iterable error.
- *   - 04/30/2025: Added debounce to fix duplicate taskUpdate events (Grok).
- *   - 04/30/2025: Fixed Vite import error for lodash.debounce (Grok).
- *   - 05/01/2025: Enhanced deduplication with stricter eventHash, added cleanup (Grok).
- *   - 05/01/2025: Increased debounce to 600ms, added detailed localStorage logging (Grok).
- *     - Why: Persistent duplicate taskUpdate events in LiveFeed.jsx (User, 05/01/2025).
- *     - How: Increased debounce, logged detailed event data to localStorage.
- *     - Test: POST /api/grok/edit, verify single green/yellow/red log in LiveFeed.jsx, no duplicate logs.
+ *   - 04/07/2025: Initialized live feed hook with taskUpdate events (Nate).
+ *   - 04/25/2025: Added socketRegistry.js to prevent redundant connections (Nate).
+ *   - 04/29/2025: Fixed duplicate event handling and connection stability (Nate).
+ *   - 05/03/2025: Added backendProposal event support and enhanced reconnection logic (Nate).
+ *   - 05/08/2025: Added singleton pattern to prevent multiple registrations (Grok).
+ *   - 05/08/2025: Forced polling transport to bypass WebSocket failures (Grok).
+ *   - 05/08/2025: Added type property to events and enhanced logging (Grok).
+ *   - 05/04/2025: Enhanced socket initialization debugging (Grok).
+ *     - Why: Socket not initialized error in useProposals.js (User, 05/04/2025).
+ *     - How: Added detailed logging for initialization failures, ensured singleton stability.
+ *     - Test: Load /grok, submit task, verify no socket initialization errors, events render in LiveFeed.jsx.
  * Test Instructions:
- *   - Run `npm run dev`, navigate to /grok: Submit "Build CRM system", verify single green/yellow/red log in LiveFeed.jsx, no console errors.
- *   - Submit "Add MFA to login": Confirm single yellow backendProposal log.
- *   - Restart server: Verify events resume on reconnect, no duplicate logs.
- *   - Check browser console and localStorage ('clientErrors') for no duplicate event logs.
+ *   - Run `npm run dev`, navigate to /grok, submit a task via TaskInput.jsx (e.g., "Build CRM system").
+ *   - Verify single green log in LiveFeed.jsx for task creation, no invalid event errors in console.
+ *   - Check console for 'useLiveFeed: Processing taskUpdate' logs with correct status and message.
+ *   - Delete a task, confirm single green log for deletion in LiveFeed.jsx.
+ *   - Restart backend server, verify feed updates on reconnect, no WebSocket errors.
+ *   - Open 10 /grok tabs, confirm single connection log per client in idurar_db.logs, registry size stable at 1.
  * Rollback Instructions:
  *   - Revert to useLiveFeed.js.bak (`mv frontend/src/hooks/useLiveFeed.js.bak frontend/src/hooks/useLiveFeed.js`).
- *   - Verify /grok loads, LiveFeed.jsx renders without duplicates.
+ *   - Verify /grok loads, live feed updates appear without duplicates.
  * Future Enhancements:
- *   - Add event filtering (Sprint 4).
- *   - Support event persistence (Sprint 5).
+ *   - Add event filtering for specific task types (Sprint 4).
+ *   - Support WebSocket scaling with Redis (Sprint 5).
+ *   - Persist feed events to localStorage for offline recovery (Sprint 6).
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import socketRegistry from '../utils/socketRegistry';
 import { logClientError } from '../utils/logClientError';
 import { BASE_URL } from '../config/serverApiConfig';
-import debounce from 'lodash/debounce';
+import { v4 as uuidv4 } from 'uuid';
 
-const useLiveFeed = () => {
-  const [events, setEvents] = useState([]);
-  const socketRef = useRef(null);
-  const seenEvents = useRef(new Set());
-  const eventHashes = useRef(new Set());
+// Singleton Socket.IO instance
+let socketInstance = null;
+const socketId = Symbol('useLiveFeed');
+let listeners = [];
 
-  // Cleanup old events to prevent memory growth
-  const cleanupEvents = () => {
-    const maxEvents = 1000; // Retain only the last 1000 events
-    if (seenEvents.current.size > maxEvents) {
-      const oldEvents = Array.from(seenEvents.current).slice(0, seenEvents.current.size - maxEvents);
-      oldEvents.forEach(eventId => seenEvents.current.delete(eventId));
-    }
-    if (eventHashes.current.size > maxEvents) {
-      const oldHashes = Array.from(eventHashes.current).slice(0, eventHashes.current.size - maxEvents);
-      oldHashes.forEach(hash => eventHashes.current.delete(hash));
-    }
-  };
+const initializeSocket = (singletonFlag, token, setSocketError) => {
+  if (socketInstance && socketInstance.connected) {
+    console.log('useLiveFeed: Using existing socket instance', { socketId: socketInstance.id });
+    return socketInstance;
+  }
 
-  const handleEvent = debounce((type, data) => {
-    const eventId = data.eventId || `${type}_${Date.now()}_${Math.random()}`;
-    const eventHash = `${type}_${data.taskId || 'unknown'}_${data.status || 'unknown'}_${data.error || ''}_${data.timestamp || ''}_${data.message || ''}`;
-    
-    if (seenEvents.current.has(eventId) || eventHashes.current.has(eventHash)) {
-      console.log('useLiveFeed: Skipped duplicate event', { type, eventId, eventHash, data });
-      const errorData = {
-        message: `Skipped duplicate event: ${type}`,
-        context: 'LiveFeed',
-        details: { eventId, eventHash, type, data, timestamp: new Date().toISOString() },
-      };
-      logClientError(errorData);
-      // Log to localStorage for debugging
-      try {
-        const storedErrors = JSON.parse(localStorage.getItem('clientErrors') || '[]');
-        storedErrors.push(errorData);
-        localStorage.setItem('clientErrors', JSON.stringify(storedErrors.slice(-100)));
-      } catch (err) {
-        console.error('useLiveFeed: Failed to store duplicate event in localStorage:', err.message);
-      }
-      return;
-    }
-    
-    seenEvents.current.add(eventId);
-    eventHashes.current.add(eventHash);
-    setEvents((prev) => [...prev, { type, data, eventId, timestamp: new Date().toISOString() }]);
-    cleanupEvents();
-  }, 600);
+  // Validate inputs
+  const auth = JSON.parse(localStorage.getItem('auth') || '{}');
+  const validToken = auth.token || token || 'mock-token';
+  if (!singletonFlag || !validToken || typeof validToken !== 'string') {
+    const errorMessage = 'Missing or invalid singletonFlag or token';
+    console.error('useLiveFeed: Initialization failed', {
+      singletonFlag,
+      token: validToken ? 'present' : 'missing',
+      timestamp: new Date().toISOString(),
+    });
+    logClientError({
+      message: errorMessage,
+      context: 'useLiveFeed',
+      details: { singletonFlag, token: validToken ? 'present' : 'missing', timestamp: new Date().toISOString() },
+    });
+    setSocketError(errorMessage);
+    return null;
+  }
 
-  useEffect(() => {
-    const auth = JSON.parse(localStorage.getItem('auth') || '{}');
-    const token = auth.token || null;
-    if (!token) {
-      logClientError({
-        message: 'Missing auth token for live feed',
-        context: 'useLiveFeed',
-        details: { timestamp: new Date().toISOString() },
-      });
-      return;
-    }
+  // Log token details
+  let tokenPayload = 'unknown';
+  try {
+    const [, payload] = validToken.split('.');
+    tokenPayload = JSON.parse(atob(payload));
+  } catch (err) {
+    console.warn('useLiveFeed: Failed to decode token payload', { error: err.message, timestamp: new Date().toISOString() });
+  }
+  console.log('useLiveFeed: Initializing with token:', {
+    token: validToken.slice(0, 10) + '...',
+    payload: tokenPayload,
+    singletonFlag,
+    timestamp: new Date().toISOString(),
+  });
 
-    const socketId = Symbol('useLiveFeed');
-    if (socketRegistry.has(socketId)) {
-      console.log('useLiveFeed: Socket already registered');
-      return;
-    }
-    socketRegistry.add(socketId);
-    console.log('useLiveFeed: Socket registered, registry size:', socketRegistry.size);
+  // Prevent redundant connections
+  if (socketRegistry.has(socketId)) {
+    console.log('useLiveFeed: Socket already registered, using existing instance', { registrySize: socketRegistry.size });
+    return socketInstance;
+  }
+  socketRegistry.add(socketId);
+  console.log('useLiveFeed: Socket registered', { socketId, registrySize: socketRegistry.size });
 
-    socketRef.current = io(BASE_URL, {
-      auth: { token },
-      query: {
-        props: JSON.stringify({
-          token,
-          client: navigator.userAgent,
-          source: 'useLiveFeed',
-        }),
-      },
-      transports: ['websocket', 'polling'],
+  // Initialize Socket.IO
+  try {
+    socketInstance = io(BASE_URL, {
+      auth: { token: validToken },
+      query: { source: 'useLiveFeed', singletonFlag },
+      transports: ['polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
-      reconnectionDelay: 5000,
-      reconnectionDelayMax: 32000,
+      reconnectionDelay: 20000,
+      reconnectionDelayMax: 60000,
+      randomizationFactor: 0.5,
+      timeout: 30000,
     });
+  } catch (err) {
+    console.error('useLiveFeed: Socket.IO initialization error', {
+      error: err.message,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
+    logClientError({
+      message: 'Socket.IO initialization error',
+      context: 'useLiveFeed',
+      details: { error: err.message, stack: err.stack, timestamp: new Date().toISOString() },
+    });
+    setSocketError('Socket.IO initialization error');
+    return null;
+  }
 
-    socketRef.current.on('taskUpdate', (data) => handleEvent('taskUpdate', data));
-    socketRef.current.on('backendProposal', (data) => handleEvent('backendProposal', data));
-    socketRef.current.on('feedback', (data) => handleEvent('feedback', data));
+  socketInstance.on('connect', () => {
+    console.log('useLiveFeed: Polling connected', { socketId: socketInstance.id });
+    setSocketError(null);
+    logClientError({
+      message: 'Polling connected',
+      context: 'useLiveFeed',
+      details: { socketId: socketInstance.id, tokenPayload, timestamp: new Date().toISOString() },
+    });
+  });
 
-    socketRef.current.on('connect_error', (err) => {
+  socketInstance.on('taskUpdate', (data) => {
+    console.log('useLiveFeed: Processing taskUpdate', {
+      taskId: data.taskId,
+      status: data.status,
+      eventId: data.eventId,
+      timestamp: new Date().toISOString(),
+    });
+    if (!data.taskId || !data.status) {
+      console.warn('useLiveFeed: Invalid taskUpdate event', { data, timestamp: new Date().toISOString() });
       logClientError({
-        message: `Socket.IO connect error: ${err.message}`,
+        message: 'Invalid taskUpdate event: missing taskId or status',
         context: 'useLiveFeed',
-        details: { stack: err.stack, timestamp: new Date().toISOString() },
+        details: { data, timestamp: new Date().toISOString() },
       });
+      return;
+    }
+    const event = {
+      id: data.eventId || uuidv4(),
+      type: 'taskUpdate',
+      message: `Task ${data.taskId} updated to ${data.status}`,
+      timestamp: new Date().toISOString(),
+      color: data.status === 'failed' ? 'red' : 'green',
+      data,
+    };
+    listeners.forEach((listener) => listener(event));
+  });
+
+  socketInstance.on('backendProposal', (data) => {
+    console.log('useLiveFeed: Processing backendProposal', {
+      taskId: data.taskId,
+      proposalCount: data.proposals?.length || data.proposal ? 1 : 0,
+      eventId: data.eventId,
+      timestamp: new Date().toISOString(),
     });
+    if (!data.taskId) {
+      console.warn('useLiveFeed: Invalid backendProposal event', { data, timestamp: new Date().toISOString() });
+      logClientError({
+        message: 'Invalid backendProposal event: missing taskId',
+        context: 'useLiveFeed',
+        details: { data, timestamp: new Date().toISOString() },
+      });
+      return;
+    }
+    const event = {
+      id: data.eventId || uuidv4(),
+      type: 'backendProposal',
+      message: `Proposal created for task ${data.taskId}`,
+      timestamp: new Date().toISOString(),
+      color: 'blue',
+      data,
+    };
+    listeners.forEach((listener) => listener(event));
+  });
+
+  socketInstance.on('connect_error', (err) => {
+    const errorMessage = err.message ? `Socket.IO connect error: ${err.message}` : 'Socket.IO connect error: Unknown error';
+    console.error('useLiveFeed: Connection error', {
+      error: err.message,
+      stack: err.stack,
+      tokenPayload,
+      timestamp: new Date().toISOString(),
+    });
+    logClientError({
+      message: errorMessage,
+      context: 'useLiveFeed',
+      details: { stack: err.stack, token: validToken.slice(0, 10) + '...', tokenPayload, timestamp: new Date().toISOString() },
+    });
+    setSocketError(errorMessage);
+  });
+
+  socketInstance.on('reconnect_attempt', (attempt) => {
+    console.log('useLiveFeed: Reconnection attempt', { attempt, tokenPayload, timestamp: new Date().toISOString() });
+    logClientError({
+      message: `Reconnection attempt ${attempt}`,
+      context: 'useLiveFeed',
+      details: { attempt, timestamp: new Date().toISOString() },
+    });
+  });
+
+  socketInstance.on('reconnect', (attempt) => {
+    console.log('useLiveFeed: Reconnected successfully', { attempt, tokenPayload, timestamp: new Date().toISOString() });
+    logClientError({
+      message: `Reconnected after ${attempt} attempts`,
+      context: 'useLiveFeed',
+      details: { attempt, timestamp: new Date().toISOString() },
+    });
+    setSocketError(null);
+  });
+
+  socketInstance.onAny((event, ...args) => {
+    console.log('useLiveFeed: Raw socket event', { event, args, timestamp: new Date().toISOString() });
+  });
+
+  return socketInstance;
+};
+
+const useLiveFeed = ({ singletonFlag, token, maxEvents = 100 }) => {
+  const [feed, setFeed] = useState([]);
+
+  useEffect(() => {
+    const socket = initializeSocket(singletonFlag, token, (error) => {
+      if (error && typeof error === 'string') {
+        setFeed((prev) => [
+          {
+            id: uuidv4(),
+            message: error,
+            timestamp: new Date().toISOString(),
+            color: 'red',
+            type: 'error',
+            data: { error },
+          },
+          ...prev.slice(0, maxEvents - 1),
+        ]);
+      }
+    });
+    if (!socket) {
+      console.warn('useLiveFeed: Socket initialization failed, returning empty feed', {
+        singletonFlag,
+        token: token ? 'present' : 'missing',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const updateFeed = (event) => {
+      setFeed((prev) => [event, ...prev.slice(0, maxEvents - 1)]);
+    };
+
+    listeners.push(updateFeed);
 
     return () => {
-      socketRef.current?.disconnect();
-      socketRegistry.delete(socketId);
-      console.log('useLiveFeed: Socket unregistered, registry size:', socketRegistry.size);
+      listeners = listeners.filter((listener) => listener !== updateFeed);
+      if (listeners.length === 0 && socketInstance) {
+        socketInstance.disconnect();
+        socketRegistry.delete(socketId);
+        socketInstance = null;
+        console.log('useLiveFeed: Socket unregistered', { socketId, registrySize: socketRegistry.size });
+      }
     };
-  }, []);
+  }, [singletonFlag, token, maxEvents]);
 
-  return {
-    events,
-    socketLiveFeed: socketRef.current ? [socketRef.current] : [],
-  };
+  return { feed, socket: socketInstance };
 };
 
 export default useLiveFeed;

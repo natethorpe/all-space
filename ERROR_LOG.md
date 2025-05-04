@@ -2304,3 +2304,1071 @@ Test Instructions:
           - Confirm quantity increases to 110
           - Verify AI prediction notification appears with predicted ticket quantity
         
+
+## Entry - 2025-05-01T23:58:56.140Z
+Parsed prompt for task 719d170a-85ab-4534-b8fe-8406de6a1e66: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory",
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-01T23:58:56.153Z
+# Staged Files Generated
+Task ID: 719d170a-85ab-4534-b8fe-8406de6a1e66
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx, frontend/src/pages/Inventory.jsx
+Test Instructions: undefined
+
+## Entry - 2025-05-01T23:58:56.190Z
+# Test File Generated
+Task ID: 719d170a-85ab-4534-b8fe-8406de6a1e66
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-719d170a-85ab-4534-b8fe-8406de6a1e66.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-01T23:59:00.188Z
+# BackendProposal Created
+Task ID: 719d170a-85ab-4534-b8fe-8406de6a1e66
+Proposal ID: 68140ac4eaaeea72f5440fb1
+File: inventory.js
+Description: Add inventory management endpoint
+
+## Entry - 2025-05-01T23:59:00.195Z
+# Task Processed
+Task ID: 719d170a-85ab-4534-b8fe-8406de6a1e66
+Staged Files: frontend/src/pages/Inventory.jsx, frontend/src/pages/Inventory.jsx
+Proposals: 1
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-02T00:11:49.485Z
+Parsed prompt for task ca199fab-3a8a-41e9-a682-52bdf75c03b3: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory",
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T00:11:49.497Z
+# Staged Files Generated
+Task ID: ca199fab-3a8a-41e9-a682-52bdf75c03b3
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: undefined
+
+## Entry - 2025-05-02T00:11:49.522Z
+# Test File Generated
+Task ID: ca199fab-3a8a-41e9-a682-52bdf75c03b3
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-ca199fab-3a8a-41e9-a682-52bdf75c03b3.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-02T00:11:53.660Z
+# BackendProposal Created
+Task ID: ca199fab-3a8a-41e9-a682-52bdf75c03b3
+Proposal ID: 68140dc9a88aee4606bd351e
+File: inventory.js
+Description: Add inventory management endpoint
+
+## Entry - 2025-05-02T00:11:53.667Z
+# Task Processed
+Task ID: ca199fab-3a8a-41e9-a682-52bdf75c03b3
+Staged Files: frontend/src/pages/Inventory.jsx
+Proposals: 1
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-02T19:57:01.743Z
+Parsed prompt for task b894cf24-6127-49b4-939e-8de7b4941d1b: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T19:57:01.759Z
+# Staged Files Generated
+Task ID: b894cf24-6127-49b4-939e-8de7b4941d1b
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: undefined
+
+## Entry - 2025-05-02T19:57:12.375Z
+# Task Processing Error
+Task ID: b894cf24-6127-49b4-939e-8de7b4941d1b
+Description: Failed to persist stagedFiles after 7 attempts: Cannot convert undefined or null to object
+Stack: Error: Failed to persist stagedFiles after 7 attempts: Cannot convert undefined or null to object
+    at processTask (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\utils\taskManager.js:350:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\routes\taskRoutes.js:150:7
+
+## Entry - 2025-05-02T20:25:04.418Z
+Parsed prompt for task 5d13d5cb-59d5-4d00-8af2-ef45465f6374: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T20:25:04.438Z
+# Staged Files Generated
+Task ID: 5d13d5cb-59d5-4d00-8af2-ef45465f6374
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: undefined
+
+## Entry - 2025-05-02T20:25:15.031Z
+# Task Processing Error
+Task ID: 5d13d5cb-59d5-4d00-8af2-ef45465f6374
+Description: Failed to persist stagedFiles after 7 attempts: Cannot convert undefined or null to object
+Stack: Error: Failed to persist stagedFiles after 7 attempts: Cannot convert undefined or null to object
+    at processTask (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\utils\taskManager.js:380:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\routes\taskRoutes.js:150:7
+
+## Entry - 2025-05-02T20:49:58.594Z
+Parsed prompt for task 649e680f-cd04-4a3a-8efe-16964e69d8ac: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T20:49:58.616Z
+# Staged Files Generated
+Task ID: 649e680f-cd04-4a3a-8efe-16964e69d8ac
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-02T21:04:27.943Z
+Parsed prompt for task 3c51d997-5b1b-4a07-ba13-fbf9c3d593d0: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T21:04:27.970Z
+# Staged Files Generated
+Task ID: 3c51d997-5b1b-4a07-ba13-fbf9c3d593d0
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-02T21:15:40.833Z
+Parsed prompt for task 067dd7a8-14ba-4e6c-a688-d2b6773f0552: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T21:15:40.854Z
+# Staged Files Generated
+Task ID: 067dd7a8-14ba-4e6c-a688-d2b6773f0552
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-02T21:16:19.220Z
+Parsed prompt for task 60eda9b8-efbc-4305-b7a5-4e272dba8295: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T21:16:19.236Z
+# Staged Files Generated
+Task ID: 60eda9b8-efbc-4305-b7a5-4e272dba8295
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-02T21:45:02.097Z
+Parsed prompt for task bacd08db-b2cd-416d-b08d-6289792e1c56: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T21:45:02.124Z
+# Staged Files Generated
+Task ID: bacd08db-b2cd-416d-b08d-6289792e1c56
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-02T22:00:13.838Z
+Parsed prompt for task 9a4b2817-d930-478e-92d5-569fcc1e5cec: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T22:00:13.860Z
+# Staged Files Generated
+Task ID: 9a4b2817-d930-478e-92d5-569fcc1e5cec
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-02T22:00:14.030Z
+# Test File Generated
+Task ID: 9a4b2817-d930-478e-92d5-569fcc1e5cec
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-9a4b2817-d930-478e-92d5-569fcc1e5cec.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-02T22:00:17.950Z
+# BackendProposal Created
+Task ID: 9a4b2817-d930-478e-92d5-569fcc1e5cec
+Proposal ID: 681540719682151ee6b51931
+File: inventory.js
+Description: Add inventory management endpoint
+
+## Entry - 2025-05-02T22:00:17.972Z
+# Task Processed
+Task ID: 9a4b2817-d930-478e-92d5-569fcc1e5cec
+Staged Files: frontend/src/pages/Inventory.jsx
+Proposals: 1
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+Test URL: http://localhost:8888/api/grok/test/9a4b2817-d930-478e-92d5-569fcc1e5cec/797d05f2-419d-433a-a550-38e79aeec48d
+
+## Entry - 2025-05-02T22:09:12.468Z
+Parsed prompt for task 25b9ebda-982b-48ad-bc72-f04e5f26e7c7: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T22:09:12.494Z
+# Staged Files Generated
+Task ID: 25b9ebda-982b-48ad-bc72-f04e5f26e7c7
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-02T22:09:12.683Z
+# Test File Generated
+Task ID: 25b9ebda-982b-48ad-bc72-f04e5f26e7c7
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-25b9ebda-982b-48ad-bc72-f04e5f26e7c7.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-02T22:09:16.472Z
+# BackendProposal Created
+Task ID: 25b9ebda-982b-48ad-bc72-f04e5f26e7c7
+Proposal ID: 6815428cba95b2c81572c738
+File: inventory.js
+Description: Add inventory management endpoint
+
+## Entry - 2025-05-02T22:09:16.496Z
+# Task Processed
+Task ID: 25b9ebda-982b-48ad-bc72-f04e5f26e7c7
+Staged Files: frontend/src/pages/Inventory.jsx
+Proposals: 1
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+Test URL: http://localhost:8888/api/grok/test/25b9ebda-982b-48ad-bc72-f04e5f26e7c7/c6fb6307-5f5e-4966-9491-b41e785b495a
+
+## Entry - 2025-05-02T22:37:33.047Z
+Parsed prompt for task 6787efa1-b7d4-4564-87ad-a424fbe584c0: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-02T22:37:33.077Z
+# Staged Files Generated
+Task ID: 6787efa1-b7d4-4564-87ad-a424fbe584c0
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-02T22:37:33.249Z
+# Test File Generated
+Task ID: 6787efa1-b7d4-4564-87ad-a424fbe584c0
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-6787efa1-b7d4-4564-87ad-a424fbe584c0.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-02T22:37:37.145Z
+# BackendProposal Created
+Task ID: 6787efa1-b7d4-4564-87ad-a424fbe584c0
+Proposal ID: 681549313c9e296e6f423410
+File: inventory.js
+Description: Add inventory management endpoint
+
+## Entry - 2025-05-02T22:37:37.174Z
+# Task Processed
+Task ID: 6787efa1-b7d4-4564-87ad-a424fbe584c0
+Staged Files: frontend/src/pages/Inventory.jsx
+Proposals: 1
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+Test URL: http://localhost:8888/api/grok/test/6787efa1-b7d4-4564-87ad-a424fbe584c0/d4413eb0-0540-4677-845b-ecb26ad1c18c
+
+## Entry - 2025-05-02T22:38:12.788Z
+# Test File Generated
+Task ID: 6787efa1-b7d4-4564-87ad-a424fbe584c0
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-6787efa1-b7d4-4564-87ad-a424fbe584c0.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-02T22:38:15.599Z
+# Test File Generated
+Task ID: 6787efa1-b7d4-4564-87ad-a424fbe584c0
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-6787efa1-b7d4-4564-87ad-a424fbe584c0.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-03T18:25:42.055Z
+Parsed prompt for task ce0a95de-c424-4e56-86bf-fb674fe752e7: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-03T18:25:42.069Z
+# Staged Files Generated
+Task ID: ce0a95de-c424-4e56-86bf-fb674fe752e7
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-03T18:25:42.274Z
+# Test File Generated
+Task ID: ce0a95de-c424-4e56-86bf-fb674fe752e7
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-ce0a95de-c424-4e56-86bf-fb674fe752e7.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-03T18:25:46.540Z
+# BackendProposal Created
+Task ID: ce0a95de-c424-4e56-86bf-fb674fe752e7
+Proposal ID: 68165faab74a95957f84674c
+File: inventory.js
+Description: Add inventory management endpoint
+
+## Entry - 2025-05-03T18:25:46.561Z
+# Task Processed
+Task ID: ce0a95de-c424-4e56-86bf-fb674fe752e7
+Staged Files: frontend/src/pages/Inventory.jsx
+Proposals: 1
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+Test URL: http://localhost:8888/api/grok/test/ce0a95de-c424-4e56-86bf-fb674fe752e7/b9535be3-e583-4399-b60d-084df32fa017
+
+## Entry - 2025-05-04T00:25:34.378Z
+Parsed prompt for task 19e0726d-4c53-4e0f-8cd6-723e04da5591: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-04T00:25:34.396Z
+# Staged Files Generated
+Task ID: 19e0726d-4c53-4e0f-8cd6-723e04da5591
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-04T00:25:34.572Z
+# Test File Generated
+Task ID: 19e0726d-4c53-4e0f-8cd6-723e04da5591
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-19e0726d-4c53-4e0f-8cd6-723e04da5591.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-04T00:25:38.640Z
+# BackendProposal Created
+Task ID: 19e0726d-4c53-4e0f-8cd6-723e04da5591
+Proposal ID: 6816b402de59b332b68152eb
+File: inventory.js
+Description: Add inventory management endpoint
+
+## Entry - 2025-05-04T00:25:44.250Z
+# Email Send Error
+Task ID: 19e0726d-4c53-4e0f-8cd6-723e04da5591
+Recipient: admin@idurarapp.com
+Subject: Task 19e0726d-4c53-4e0f-8cd6-723e04da5591 Completed
+Error: Invalid login: 535 Authentication failed
+Stack: Error: Invalid login: 535 Authentication failed
+    at SMTPConnection._formatError (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\node_modules\nodemailer\lib\smtp-connection\index.js:807:19)
+    at SMTPConnection._actionAUTHComplete (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\node_modules\nodemailer\lib\smtp-connection\index.js:1586:34)
+    at SMTPConnection.<anonymous> (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\node_modules\nodemailer\lib\smtp-connection\index.js:554:26)
+    at SMTPConnection._processResponse (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\node_modules\nodemailer\lib\smtp-connection\index.js:991:20)
+    at SMTPConnection._onData (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\node_modules\nodemailer\lib\smtp-connection\index.js:772:14)
+    at SMTPConnection._onSocketData (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\node_modules\nodemailer\lib\smtp-connection\index.js:195:44)
+    at TLSSocket.emit (node:events:514:28)
+    at addChunk (node:internal/streams/readable:376:12)
+    at readableAddChunk (node:internal/streams/readable:349:9)
+    at Readable.push (node:internal/streams/readable:286:10)
+
+## Entry - 2025-05-04T00:25:44.256Z
+# Task Processed
+Task ID: 19e0726d-4c53-4e0f-8cd6-723e04da5591
+Staged Files: frontend/src/pages/Inventory.jsx
+Proposals: 1
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+Test URL: http://localhost:8888/api/grok/test/19e0726d-4c53-4e0f-8cd6-723e04da5591/e17bb199-6ecf-4091-9d6f-75bff0c4c223
+
+## Entry - 2025-05-04T00:48:25.929Z
+# Email Sent
+Task ID: test-id
+Recipient: test@example.com
+Subject: Test
+Event: test-event
+
+## Entry - 2025-05-04T02:45:04.427Z
+Parsed prompt for task 97fa7df7-7836-4ae0-b121-3b2ebee576ff: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-04T02:45:04.449Z
+# Staged Files Generated
+Task ID: 97fa7df7-7836-4ae0-b121-3b2ebee576ff
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-04T02:45:04.609Z
+# Test File Generated
+Task ID: 97fa7df7-7836-4ae0-b121-3b2ebee576ff
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-97fa7df7-7836-4ae0-b121-3b2ebee576ff.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-04T02:45:08.550Z
+# BackendProposal Created
+Task ID: 97fa7df7-7836-4ae0-b121-3b2ebee576ff
+Proposal ID: 6816d4b480d306b6baddb5cf
+File: inventory.js
+Description: Add inventory management endpoint
+
+## Entry - 2025-05-04T02:45:10.089Z
+# Email Sent
+Task ID: 97fa7df7-7836-4ae0-b121-3b2ebee576ff
+Recipient: admin@idurarapp.com
+Subject: Task 97fa7df7-7836-4ae0-b121-3b2ebee576ff Completed
+Event: task_completed
+
+## Entry - 2025-05-04T02:45:10.093Z
+# Task Processed
+Task ID: 97fa7df7-7836-4ae0-b121-3b2ebee576ff
+Staged Files: frontend/src/pages/Inventory.jsx
+Proposals: 1
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+Test URL: http://localhost:8888/api/grok/test/97fa7df7-7836-4ae0-b121-3b2ebee576ff/fcd44d77-afbc-4475-b9ea-140c9468466f
+
+## Entry - 2025-05-04T04:42:12.289Z
+Parsed prompt for task 86f957ae-2e75-4890-b536-f62a795a8366: {
+  "action": "create",
+  "target": "",
+  "features": [],
+  "isMultiFile": false,
+  "backendChanges": [],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-04T04:42:12.300Z
+# Staged Files Generated
+Task ID: 86f957ae-2e75-4890-b536-f62a795a8366
+Target: crm
+Files: frontend/src/pages/DefaultSystem.jsx
+Test Instructions: 
+        Test Instructions for DefaultSystem.jsx:
+        - Navigate to http://localhost:3000/system
+        - Verify the page renders with "Default System Page" title
+      
+
+## Entry - 2025-05-04T04:42:12.502Z
+# Test File Generated
+Task ID: 86f957ae-2e75-4890-b536-f62a795a8366
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-86f957ae-2e75-4890-b536-f62a795a8366.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-04T04:42:17.681Z
+# Email Sent
+Task ID: 86f957ae-2e75-4890-b536-f62a795a8366
+Recipient: admin@idurarapp.com
+Subject: Task 86f957ae-2e75-4890-b536-f62a795a8366 Completed
+Event: task_completed
+
+## Entry - 2025-05-04T04:42:17.685Z
+# Task Processed
+Task ID: 86f957ae-2e75-4890-b536-f62a795a8366
+Staged Files: frontend/src/pages/DefaultSystem.jsx
+Proposals: 0
+Test Instructions: 
+        Test Instructions for DefaultSystem.jsx:
+        - Navigate to http://localhost:3000/system
+        - Verify the page renders with "Default System Page" title
+      
+Test URL: http://localhost:8888/api/grok/test/86f957ae-2e75-4890-b536-f62a795a8366/801bfd15-b557-415d-91a5-d0f39894a258
+
+## Entry - 2025-05-04T05:09:00.720Z
+Parsed prompt for task 29987171-47b9-49ea-8c6b-582652e2ea71: {
+  "action": "create",
+  "target": "inventory",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-04T05:09:00.732Z
+# Staged Files Generated
+Task ID: 29987171-47b9-49ea-8c6b-582652e2ea71
+Target: inventory
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-04T05:09:00.887Z
+# Test File Generated
+Task ID: 29987171-47b9-49ea-8c6b-582652e2ea71
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-29987171-47b9-49ea-8c6b-582652e2ea71.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-04T05:09:14.534Z
+# Task Processing Error
+Task ID: 29987171-47b9-49ea-8c6b-582652e2ea71
+Description: Automated test failed: testFilePath is not defined
+Stack: Error: Automated test failed: testFilePath is not defined
+    at processTask (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\utils\taskManager.js:517:13)
+    at async C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\routes\taskRoutes.js:150:7
+
+## Entry - 2025-05-04T05:11:15.823Z
+Parsed prompt for task 263130da-f009-4460-af4d-f05bc44191fb: {
+  "action": "create",
+  "target": "inventory",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-04T05:11:15.831Z
+# Staged Files Generated
+Task ID: 263130da-f009-4460-af4d-f05bc44191fb
+Target: inventory
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-04T05:11:16.020Z
+# Test File Generated
+Task ID: 263130da-f009-4460-af4d-f05bc44191fb
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-263130da-f009-4460-af4d-f05bc44191fb.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-04T05:11:26.836Z
+# Task Processing Error
+Task ID: 263130da-f009-4460-af4d-f05bc44191fb
+Description: Automated test failed: testFilePath is not defined
+Stack: Error: Automated test failed: testFilePath is not defined
+    at processTask (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\utils\taskManager.js:517:13)
+    at async C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\routes\taskRoutes.js:150:7
+
+## Entry - 2025-05-04T05:24:43.994Z
+Parsed prompt for task 4650c09f-34b3-4c32-bc9a-65632f7bd2f8: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-04T05:24:44.010Z
+# Staged Files Generated
+Task ID: 4650c09f-34b3-4c32-bc9a-65632f7bd2f8
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-04T05:24:44.159Z
+# Test File Generated
+Task ID: 4650c09f-34b3-4c32-bc9a-65632f7bd2f8
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-4650c09f-34b3-4c32-bc9a-65632f7bd2f8.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-04T05:24:52.736Z
+Parsed prompt for task d13c34a4-509c-47ae-aa0d-f0946e6dbe6c: {
+  "action": "create",
+  "target": "an inventory system",
+  "features": [
+    "inventory"
+  ],
+  "isMultiFile": true,
+  "backendChanges": [
+    {
+      "file": "inventory.js",
+      "change": "\n        const express = require('express');\n        const router = express.Router();\n        router.get('/inventory', (req, res) => res.json({ items: [{ id: 1, name: 'Tickets', quantity: 100 }] }));\n        module.exports = router;\n      ",
+      "description": "Add inventory management endpoint",
+      "reason": "Feature addition for inventory tracking"
+    }
+  ],
+  "uploadedFiles": []
+}
+
+## Entry - 2025-05-04T05:24:52.746Z
+# Staged Files Generated
+Task ID: d13c34a4-509c-47ae-aa0d-f0946e6dbe6c
+Target: an inventory system
+Files: frontend/src/pages/Inventory.jsx
+Test Instructions: 
+          Test Instructions for Inventory.jsx:
+          - Navigate to http://localhost:3000/inventory
+          - Verify the table renders with columns: Name, Quantity, Category, Action
+          - Confirm two items listed (Festival Tickets, Popcorn)
+          - Enter "Tickets" in the search input (data-testid="search-input")
+          - Verify only Festival Tickets are shown
+          - Click "Restock" for Festival Tickets (data-testid="restock-button-1")
+          - Confirm quantity increases to 110
+          - Verify AI prediction notification appears with predicted ticket quantity
+        
+
+## Entry - 2025-05-04T05:24:52.978Z
+# Test File Generated
+Task ID: d13c34a4-509c-47ae-aa0d-f0946e6dbe6c
+File: C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\tests\task-d13c34a4-509c-47ae-aa0d-f0946e6dbe6c.spec.js
+Assertions: Page body visible
+
+## Entry - 2025-05-04T05:24:57.670Z
+# Task Processing Error
+Task ID: 4650c09f-34b3-4c32-bc9a-65632f7bd2f8
+Description: Automated test failed: testFilePath is not defined
+Stack: Error: Automated test failed: testFilePath is not defined
+    at processTask (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\utils\taskManager.js:517:13)
+    at async C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\routes\taskRoutes.js:150:7
+
+## Entry - 2025-05-04T05:25:03.819Z
+# Task Processing Error
+Task ID: d13c34a4-509c-47ae-aa0d-f0946e6dbe6c
+Description: Automated test failed: testFilePath is not defined
+Stack: Error: Automated test failed: testFilePath is not defined
+    at processTask (C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\utils\taskManager.js:517:13)
+    at async C:\Users\nthorpe\Desktop\crm\idurar-erp-crm\backend\src\routes\taskRoutes.js:150:7

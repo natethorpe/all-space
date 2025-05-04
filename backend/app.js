@@ -38,8 +38,10 @@
  *   - 04/29/2025: Enhanced request logging for 404 issues (Nate).
  *   - 05/03/2025: Fixed Admin.findOne is not a function error (Nate).
  *   - 04/30/2025: Used require(), added model checks, simplified error handling (Grok).
- *     - Why: Fix server crash on startup (User, 04/30/2025).
- *     - How: Reverted to synchronous require(), validated models, streamlined error handler.
+ *   - 05/01/2025: Fixed TypeError: connectDB is not a function (issue #43) (Grok).
+ *     - Why: db.js exports initializeDB, not connectDB, causing startup crash (User, 05/01/2025).
+ *     - How: Replaced connectDB with initializeDB, preserved all functionality.
+ *     - Test: Run `npm start`, verify "MongoDB connected" log, no TypeError.
  * Test Instructions:
  *   - Run `npm start`: Verify console logs "Server running on port 8888", idurar_db.logs shows "MongoDB connected", "Routes mounted".
  *   - GET /api/health: Confirm 200 response with { success: true, status: 'Server is running' }.
@@ -75,6 +77,7 @@ const app = express();
 const server = http.createServer(app);
 const port = process.env.PORT || 8888;
 app.use(fileUpload());
+
 // Middleware
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
@@ -101,7 +104,7 @@ async function startServer() {
   try {
     // Initialize MongoDB
     console.log('app.js: Connecting to MongoDB');
-    await initializeDB();
+    await initializeDB(); // Updated from connectDB to initializeDB
     await logInfo('MongoDB connected', 'app.js', { timestamp: new Date().toISOString() });
 
     // Validate models
