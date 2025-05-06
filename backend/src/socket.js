@@ -17,8 +17,10 @@
  *   - 04/07/2025: Initialized basic Socket.IO setup (Nate).
  *   - 05/03/2025: Moved logic to socketUtils.js for modularity (Nate).
  *   - 04/30/2025: Ensured stable wrapper for WebSocket connectivity (Grok).
- *     - Why: Fix frontend connectivity issues after server crash (User, 04/30/2025).
- *     - How: Simplified wrapper, verified socketUtils.js compatibility.
+ *   - 05/08/2025: Added handshake error logging (Grok).
+ *     - Why: Debug Socket.IO 400 errors in useLiveFeed.js (User, 05/08/2025).
+ *     - How: Added detailed logging for handshake failures, preserved existing functionality.
+ *     - Test: Run `npm start`, load /grok, verify WebSocket connects, check grok.log for handshake logs.
  * Test Instructions:
  *   - Run `npm start`: Verify "Socket.IO initialized" in idurar_db.logs, no errors.
  *   - Load frontend (npm run dev): Confirm no net::ERR_CONNECTION_REFUSED in browser console.
@@ -38,9 +40,20 @@ async function initSocket(server) {
   try {
     const io = await setupSocket(server);
     await logInfo('Socket.IO initialized', 'socket.js', { timestamp: new Date().toISOString() });
+    io.on('connect_error', (err) => {
+      logError('Socket.IO handshake failed', 'socket.js', {
+        error: err.message,
+        stack: err.stack,
+        timestamp: new Date().toISOString(),
+      });
+    });
     return io;
   } catch (err) {
-    await logError('Socket.IO initialization failed', 'socket.js', { error: err.message || err, timestamp: new Date().toISOString() });
+    await logError('Socket.IO initialization failed', 'socket.js', {
+      error: err.message,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
     throw err;
   }
 }
@@ -49,7 +62,11 @@ function getIO() {
   try {
     return getSocket();
   } catch (err) {
-    logError('Failed to get Socket.IO instance', 'socket.js', { error: err.message || err, timestamp: new Date().toISOString() });
+    logError('Failed to get Socket.IO instance', 'socket.js', {
+      error: err.message,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+    });
     throw err;
   }
 }

@@ -20,20 +20,24 @@
  *   - 04/29/2025: Fixed OverwriteModelError for Log model (Nate).
  *   - 04/30/2025: Optimized retry logic, added console fallback (Grok).
  *   - 05/04/2025: Increased timeout to 30s, improved retry delays (Grok).
- *     - Why: Persistent logs.insertOne() buffering timeout errors (User, 05/04/2025).
- *     - How: Set maxTimeMS to 30s, adjusted retry delays to 1s, 2s, 4s, added detailed error logging.
- *     - Test: Run `npm start`, submit task, verify idurar_db.logs, no timeout errors.
+ *   - 05/06/2025: Enhanced logging for MongoDB connection failures (Grok).
+ *     - Why: Persistent logs.insertOne() buffering timeouts due to MongoDB connection failure (User, 05/06/2025).
+ *     - How: Added mongoose connection status to error logs, improved timeout error details.
+ *     - Test: Run `npm start`, simulate MongoDB failure, verify detailed logs in console, no crashes.
  * Test Instructions:
  *   - Run `npm start`: Confirm idurar_db.logs shows startup logs (e.g., "Server running on port 8888"), no buffering timeout errors.
  *   - POST /api/grok/edit with "Build CRM system": Verify task creation logs in idurar_db.logs, no timeouts.
- *   - Simulate MongoDB delay: Confirm console fallback logs, no crashes.
+ *   - Simulate MongoDB delay: Confirm console fallback logs with connection status, no crashes.
  *   - Check idurar_db.logs: Verify all log levels (info, debug, warn, error).
  * Rollback Instructions:
- *   - Revert to logUtils.js.bak (`mv backend/src/utils/logUtils.js.bak backend/src/utils/logUtils.js`).
+ *   - Revert to logUtils.js.bak (`copy backend\src\utils\logUtils.js.bak backend\src\utils\logUtils.js`).
  *   - Verify logs appear in idurar_db.logs post-rollback.
  * Future Enhancements:
  *   - Add log filtering endpoint (Sprint 4).
  *   - Support log analytics (Sprint 5).
+ * Self-Notes:
+ *   - Nate: Created unified logging with retry logic (05/01/2025).
+ *   - Grok: Enhanced MongoDB connection failure logging (05/06/2025).
  */
 
 const mongoose = require('mongoose');
@@ -56,6 +60,7 @@ async function initializeLogModel() {
       console.error('logUtils.js: Failed to initialize Log model', {
         error: err.message,
         stack: err.stack,
+        mongooseConnectionState: mongoose.connection.readyState,
         timestamp: new Date().toISOString(),
       });
       Log = null;
@@ -80,7 +85,10 @@ async function log(level, message, context, details) {
               level,
               message,
               context,
-              details,
+              details: {
+                ...details,
+                mongooseConnectionState: mongoose.connection.readyState,
+              },
               timestamp: new Date(),
             },
             { maxTimeMS: 30000 } // 30s timeout
@@ -94,6 +102,7 @@ async function log(level, message, context, details) {
             error: err.message,
             message,
             context,
+            mongooseConnectionState: mongoose.connection.readyState,
             timestamp: new Date().toISOString(),
           });
           if (attempt >= maxAttempts) {
@@ -103,14 +112,25 @@ async function log(level, message, context, details) {
         }
       }
     } else {
-      console.log(`logUtils.js: [${level.toUpperCase()}]`, { message, context, details, timestamp: new Date().toISOString() });
+      console.log(`logUtils.js: [${level.toUpperCase()}]`, {
+        message,
+        context,
+        details: {
+          ...details,
+          mongooseConnectionState: mongoose.connection.readyState,
+        },
+        timestamp: new Date().toISOString(),
+      });
     }
   } catch (err) {
     console.error('logUtils.js: Log failed', {
       level,
       message,
       context,
-      details,
+      details: {
+        ...details,
+        mongooseConnectionState: mongoose.connection.readyState,
+      },
       error: err.message,
       stack: err.stack,
       timestamp: new Date().toISOString(),
