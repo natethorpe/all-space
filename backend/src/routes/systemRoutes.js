@@ -26,13 +26,15 @@
  *   - 04/30/2025: Added /system/repomix for codebase analysis (Grok).
  *   - 05/01/2025: Added /sponsors/summary redirect to /sponsors (Grok).
  *   - 05/02/2025: Implemented proper /sponsors/summary endpoint (Grok).
- *     - Why: Fix 404 errors for frontend calls (User, 05/02/2025).
- *     - How: Added GET /sponsors/summary to return sponsor summary data.
- *     - Test: GET /api/sponsors/summary, verify 200 response with summary data.
+ *   - 05/08/2025: Added email configuration endpoint (Grok).
+ *     - Why: Email delivery failure to admin@idurarapp.com (User, 05/08/2025).
+ *     - How: Added GET /email-config to return valid sender/recipient, preserved existing routes.
+ *     - Test: GET /api/email-config, verify response with valid email settings.
  * Test Instructions:
  *   - Run `npm start`, GET /api/sponsors/summary: Verify 200 response with { totalSponsors, activeSponsors, totalRevenue }.
+ *   - GET /api/email-config: Verify 200 response with valid email settings.
  *   - Navigate to frontend page using SponsorshipSummary.jsx, confirm no 404 errors.
- *   - Check idurar_db.logs: Verify "Fetched sponsor summary" log, no errors.
+ *   - Check idurar_db.logs: Verify "Fetched sponsor summary" and "Fetched email config" logs, no errors.
  * Rollback Instructions:
  *   - Revert to systemRoutes.js.bak (`mv backend/src/routes/systemRoutes.js.bak backend/src/routes/systemRoutes.js`).
  *   - Verify /sponsors works post-rollback.
@@ -137,6 +139,30 @@ router.post(
         timestamp: new Date().toISOString(),
       });
       res.status(500).json({ success: false, message: err.message });
+    }
+  })
+);
+
+// GET /email-config - Fetch email configuration
+router.get(
+  '/email-config',
+  catchErrors(async (req, res) => {
+    try {
+      const emailConfig = {
+        sender: 'hiwaydriveintheater@gmail.com',
+        recipient: 'admin@hiwaydriveintheater.com', // Replace with valid recipient
+      };
+      await logInfo('Fetched email config', 'systemRoutes', {
+        emailConfig,
+        timestamp: new Date().toISOString(),
+      });
+      res.json({ success: true, emailConfig });
+    } catch (err) {
+      await logError(`Failed to fetch email config: ${err.message}`, 'systemRoutes', {
+        stack: err.stack || 'No stack trace',
+        timestamp: new Date().toISOString(),
+      });
+      res.status(500).json({ success: false, message: `Failed to fetch email config: ${err.message}` });
     }
   })
 );
